@@ -1,6 +1,7 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-
+import SplashScreen from '../screens/common/SplashScreen';
+import IntroSlider from '../screens/common/IntroSlider';
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import RoleSelectionScreen from "../screens/auth/RoleSelectionScreen";
@@ -18,8 +19,17 @@ const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+    
+    <Stack.Navigator initialRouteName="Splash">
+
+  
       {/* Auth Flow */}
+     <Stack.Screen
+    name="Splash"
+    component={SplashScreen}
+    options={{headerShown:false}}
+  />
+     
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
