@@ -18,11 +18,11 @@ const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   return (
-    <Stack.Navigator initialRouteName="RoleSelection" screenOptions={{ headerShown: false }}>
-      {/* Auth */}
-      <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+      {/* Auth Flow */}
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
 
       {/* Farmer */}
       <Stack.Screen name="FarmerDashboard" component={FarmerDashboard} />
