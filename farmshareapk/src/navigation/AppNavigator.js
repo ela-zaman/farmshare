@@ -7,9 +7,9 @@ import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 
 // Farmer Screens
-import FarmerDashboard from "../screens/farmer/DashboardScreen";
+import FarmerDashboard from "../screens/farmer/FarmerDashboard";
 import SearchScreen from "../screens/farmer/SearchScreen";
-import BookingScreen from "../screens/farmer/BookingScreen";
+import MyBookingScreen from "../screens/farmer/MyBookingScreen";
 
 // Provider Screens
 import ProviderDashboard from "../screens/provider/ProviderDashboard";
@@ -26,7 +26,7 @@ export default function AppNavigator() {
       {/* Farmer */}
       <Stack.Screen name="FarmerDashboard" component={FarmerDashboard} />
       <Stack.Screen name="Search" component={SearchScreen} />
-      <Stack.Screen name="Booking" component={BookingScreen} />
+      <Stack.Screen name="Booking" component={MyBookingScreen} />
       {/* Provider */}
       <Stack.Screen name="ProviderDashboard" component={ProviderDashboard} />
       <Stack.Screen name="AddMachine" component={AddMachineScreen} />
