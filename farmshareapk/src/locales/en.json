@@ -1,0 +1,32 @@
+
+{
+  "welcome": "Welcome to FarmShare",
+  "select_language": "Select Language",
+  "next": "Next",
+  "login": "Login",
+  "register": "Register",
+  "intro_1": "Rent Farm Machinery",
+  "intro_2": "Earn by Sharing Your Machinery",
+  "intro_3": "Maximize Your Farm Production",
+  "phone": "Phone Number",
+  "password": "Password",
+  
+  "farmer": "Farmer",
+  "provider": "Service Provider",
+  "logout": "Logout",
+
+  {
+  "register": "Register",
+  "register_as": "Register as",
+  
+  "name": "Name",
+ 
+  "address": "Address",
+
+  "error": "Error",
+  "fill_fields": "Please fill all fields",
+  "success": "Success",
+  "registration_success": "Registration successful! You can now login.",
+  "registration_failed": "Registration Failed"
+}
+}

@@ -1,0 +1,21 @@
+{
+  "welcome": "Welcome to FarmShare",
+  "select_language": "Select Language",
+  "english": "English",
+  "bangla": "Bangla",
+
+  "rent_machine": "Rent Farm Machinery",
+  "earn_machine": "Earn by sharing your machinery",
+  "maximize_farm": "Maximize your farm production",
+
+  "login": "Login",
+  "register": "Register",
+  "logout": "Logout",
+  
+  
+  "phone": "Phone Number",
+  "password": "Password",
+  "error": "Error",
+  "fill_fields": "Please fill all fields",
+  "login_failed": "Login Failed"
+}

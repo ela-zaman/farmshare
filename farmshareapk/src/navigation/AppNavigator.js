@@ -1,6 +1,7 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import SplashScreen from '../screens/common/SplashScreen';
+import LanguageSelector from "../screens/common/LanguageSelector";
 import IntroSlider from '../screens/common/IntroSlider';
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
@@ -28,6 +29,11 @@ export default function AppNavigator() {
     options={{headerShown:false}}
   />
 
+{/* Language Selection */}
+      <Stack.Screen
+        name="LanguageSelector"
+        component={LanguageSelector}
+      />
   
       {/* Auth Flow */}
      
