@@ -1,22 +1,27 @@
 import React, { useEffect, useRef } from "react";
-import { View, Image, StyleSheet, Animated, Dimensions } from "react-native";
-
-const { width } = Dimensions.get("window");
+import {
+  View,
+  StyleSheet,
+  Animated,
+  ImageBackground,
+  Image
+} from "react-native";
 
 export default function SplashScreen({ navigation }) {
 
-  const slideAnim = useRef(new Animated.Value(-width)).current; // start from left side
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.6)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
 
     Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
+      Animated.timing(scale, {
+        toValue: 1,
         duration: 1200,
         useNativeDriver: true
       }),
-      Animated.timing(opacityAnim, {
+
+      Animated.timing(opacity, {
         toValue: 1,
         duration: 1200,
         useNativeDriver: true
@@ -27,37 +32,46 @@ export default function SplashScreen({ navigation }) {
       navigation.reset({
         index: 0,
         routes: [{ name: "Login" }],
-      }); 
+      });
     }, 2500);
 
   }, []);
 
   return (
-    <View style={styles.container}>
+
+    <ImageBackground
+      source={require("G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/background.png")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+
       <Animated.Image
-        source={require("G:/Farm-Share Ap/farmshare/farmshareapk/assets/logo/Logo1.png")}
+        source={require("G:/Farm-Share Ap/farmshare/farmshareapk/assets/logo/Logo.png")}
         style={[
           styles.logo,
           {
-            transform: [{ translateX: slideAnim }],
-            opacity: opacityAnim
+            transform: [{ scale }],
+            opacity
           }
         ]}
-        resizeMode="contain"
       />
-    </View>
+
+    </ImageBackground>
+
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#2E7D32",
-    justifyContent: "center",
-    alignItems: "center"
+
+  background:{
+    flex:1,
+    justifyContent:"center",
+    alignItems:"center"
   },
-  logo: {
-    width: 200,
-    height: 200
+
+  logo:{
+    width:180,
+    height:180
   }
+
 });
