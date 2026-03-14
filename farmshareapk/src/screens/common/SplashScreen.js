@@ -1,67 +1,40 @@
-import React, { useEffect, useRef } from "react";
-import {
-  ImageBackground,
-  Animated,
-  StyleSheet
-} from "react-native";
+import React, { useEffect } from "react";
+import { ImageBackground, Image, StyleSheet } from "react-native";
 
 export default function SplashScreen({ navigation }) {
 
-  const scale = useRef(new Animated.Value(0.6)).current;
-
   useEffect(() => {
+    // Navigate to LanguageSelector after 3 seconds
+    const timer = setTimeout(() => {
+      navigation.replace("LanguageSelector");
+    }, 8000);
 
-    Animated.timing(scale,{
-      toValue:1,
-      duration:1200,
-      useNativeDriver:true
-    }).start();
+    return () => clearTimeout(timer);
+  }, [navigation]);
 
-    setTimeout(() => {
-    navigation.replace("LanguageSelector");
-  }, 5000);
-  
-
-  },[])
-
-  return(
-
+  return (
     <ImageBackground
-      source={require("G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/background.png")}
+      source={require("G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/backgroun.jpeg")}
       style={styles.container}
+      resizeMode="cover"  // Ensures background fills the screen
     >
-
-      <Animated.Image
+      <Image
         source={require("../../../assets/logo/Logo.png")}
-        style={[styles.logo,{transform:[{scale}]}]}
+        style={styles.logo}
       />
-
     </ImageBackground>
-
-  )
-
+  );
 }
 
 const styles = StyleSheet.create({
-  container:{flex:1,justifyContent:"center",alignItems:"center"},
-  logo:{width:200,height:200}
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    resizeMode: "contain"
+  }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
