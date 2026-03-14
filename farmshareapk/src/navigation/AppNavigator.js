@@ -22,14 +22,16 @@ export default function AppNavigator() {
     
     <Stack.Navigator initialRouteName="Splash">
 
-  
-      {/* Auth Flow */}
-     <Stack.Screen
+      <Stack.Screen
     name="Splash"
     component={SplashScreen}
     options={{headerShown:false}}
   />
+
+  
+      {/* Auth Flow */}
      
+     <Stack.Screen name="IntroSlider" component={IntroSlider} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />

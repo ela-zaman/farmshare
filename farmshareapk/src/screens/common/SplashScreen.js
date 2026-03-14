@@ -31,9 +31,9 @@ export default function SplashScreen({ navigation }) {
     setTimeout(() => {
       navigation.reset({
         index: 0,
-        routes: [{ name: "Login" }],
+        routes: [{ name: "IntroSlider" }],
       });
-    }, 2500);
+    }, 8500);
 
   }, []);
 
