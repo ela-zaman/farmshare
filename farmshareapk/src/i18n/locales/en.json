@@ -18,7 +18,11 @@
   "error": "Error",
   "fill_fields": "Please fill all fields",
   "login_failed": "Login Failed",
-   "home": "Home",
+  "home": "Home",
   "inventory": "Inventory",
-  "profile": "Profile"
+  "profile": "Profile",
+  "add_machinery": "Add Machinery",
+  "notification": "Notification",
+  "my_bookings": "My Bookings",
+  "fourth_button": "Reports"
 }

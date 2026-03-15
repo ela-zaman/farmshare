@@ -20,6 +20,10 @@
   "login_failed": "লগইন ব্যর্থ",
    "home": "হোম",
   "inventory": "ইনভেন্টরি",
-  "profile": "প্রোফাইল"
+  "profile": "প্রোফাইল",
+  "add_machinery": "যন্ত্র যোগ করুন",
+  "notification": "নোটিফিকেশন",
+  "my_bookings": "আমার বুকিংস",
+  "fourth_button": "রিপোর্ট" 
 
 }
