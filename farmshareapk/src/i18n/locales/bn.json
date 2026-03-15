@@ -17,6 +17,9 @@
   "password": "পাসওয়ার্ড",
   "error": "ত্রুটি",
   "fill_fields": "সব ঘর পূরণ করুন",
-  "login_failed": "লগইন ব্যর্থ"
+  "login_failed": "লগইন ব্যর্থ",
+   "home": "হোম",
+  "inventory": "ইনভেন্টরি",
+  "profile": "প্রোফাইল"
 
 }

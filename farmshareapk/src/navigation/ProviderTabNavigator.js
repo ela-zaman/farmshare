@@ -1,7 +1,8 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Alert } from "react-native";
+import { View, Alert, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import ProviderDashboard from "../screens/provider/ProviderDashboard";
 import InventoryScreen from "../screens/provider/InventoryScreen";
@@ -13,10 +14,15 @@ const Tab = createBottomTabNavigator();
 
 export default function ProviderTabNavigator() {
 
+  const { t } = useTranslation();
+
   const handleLogout = async (navigation) => {
     try {
       await logoutUser();
-      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }]
+      });
     } catch (error) {
       Alert.alert("Logout Failed", error.message);
     }
@@ -26,34 +32,67 @@ export default function ProviderTabNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarStyle: styles.tabBar,
 
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ color, size, focused }) => {
 
-          let iconName;
+          let icon;
 
           if (route.name === "Home") {
-            iconName = focused ? "home" : "home-outline";
+            icon = focused ? "home" : "home-outline";
           }
 
           else if (route.name === "Inventory") {
-            iconName = focused ? "cube" : "cube-outline";
+            icon = focused ? "cube" : "cube-outline";
           }
 
           else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline";
+            icon = focused ? "person" : "person-outline";
           }
 
           else if (route.name === "Logout") {
-            iconName = focused ? "log-out" : "log-out-outline";
+            icon = focused ? "log-out" : "log-out-outline";
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={icon} size={size} color={color} />;
+        },
+
+        tabBarLabel: ({ focused, color }) => {
+
+          let label = "";
+
+          if (route.name === "Home") {
+            label = t("home");
+          }
+
+          else if (route.name === "Inventory") {
+            label = t("inventory");
+          }
+
+          else if (route.name === "Profile") {
+            label = t("profile");
+          }
+
+          else if (route.name === "Logout") {
+            label = t("logout");
+          }
+
+          else if (route.name === "AddMachine") {
+            label = "";
+          }
+
+          return (
+            <Text style={{ color: color, fontSize: 12 }}>
+              {label}
+            </Text>
+          );
         },
 
         tabBarActiveTintColor: "#2e7d32",
-        tabBarInactiveTintColor: "gray",
+        tabBarInactiveTintColor: "gray"
       })}
     >
+
       <Tab.Screen
         name="Home"
         component={ProviderDashboard}
@@ -62,6 +101,19 @@ export default function ProviderTabNavigator() {
       <Tab.Screen
         name="Inventory"
         component={InventoryScreen}
+      />
+
+      <Tab.Screen
+        name="AddMachine"
+        component={ProviderDashboard}
+        options={{
+          tabBarLabel: "",
+          tabBarIcon: () => (
+            <View style={styles.fab}>
+              <Ionicons name="add" size={30} color="white" />
+            </View>
+          )
+        }}
       />
 
       <Tab.Screen
@@ -76,10 +128,29 @@ export default function ProviderTabNavigator() {
           tabPress: (e) => {
             e.preventDefault();
             handleLogout(navigation);
-          },
+          }
         })}
       />
 
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+
+  tabBar: {
+    height: 65,
+    paddingBottom: 8
+  },
+
+  fab: {
+    width: 60,
+    height: 60,
+    backgroundColor: "#2e7d32",
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 30
+  }
+
+});

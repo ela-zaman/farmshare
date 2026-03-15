@@ -17,5 +17,8 @@
   "password": "Password",
   "error": "Error",
   "fill_fields": "Please fill all fields",
-  "login_failed": "Login Failed"
+  "login_failed": "Login Failed",
+   "home": "Home",
+  "inventory": "Inventory",
+  "profile": "Profile"
 }
