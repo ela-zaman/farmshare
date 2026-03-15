@@ -13,7 +13,7 @@ import SearchScreen from "../screens/farmer/SearchScreen";
 import MyBookingScreen from "../screens/farmer/MyBookingScreen";
 
 // Provider Screens
-import ProviderDashboard from "../screens/provider/ProviderDashboard";
+import ProviderTabNavigator from "../navigation/ProviderTabNavigator";
 import AddMachineScreen from "../screens/provider/AddMachineScreen";
 
 const Stack = createNativeStackNavigator();
@@ -48,7 +48,10 @@ export default function AppNavigator() {
       <Stack.Screen name="Booking" component={MyBookingScreen} />
 
       {/* Provider */}
-      <Stack.Screen name="ProviderDashboard" component={ProviderDashboard} />
+      <Stack.Screen
+        name="ProviderDashboard"
+        component={ProviderTabNavigator}
+      />
       <Stack.Screen name="AddMachine" component={AddMachineScreen} />
     </Stack.Navigator>
   );

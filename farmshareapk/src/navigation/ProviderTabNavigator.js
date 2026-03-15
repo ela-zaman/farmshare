@@ -1,62 +1,83 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useTranslation } from "react-i18next";
-import Icon from "react-native-vector-icons/Ionicons";
+import { Alert } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import ProviderDashboard from "../screens/provider/ProviderDashboard";
-import InventoryScreen from "../screens/provider/MachineInventoryScreen";
+import InventoryScreen from "../screens/provider/InventoryScreen";
 import ProfileScreen from "../screens/common/ProfileScreen";
-import LogoutScreen from "../screens/auth/LogoutScreen.js";
+
+import { logoutUser } from "../firebase/authService";
 
 const Tab = createBottomTabNavigator();
 
 export default function ProviderTabNavigator() {
 
-  const { t } = useTranslation();
+  const handleLogout = async (navigation) => {
+    try {
+      await logoutUser();
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+    } catch (error) {
+      Alert.alert("Logout Failed", error.message);
+    }
+  };
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#0214a3",
-        tabBarInactiveTintColor: "gray",
 
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ focused, color, size }) => {
 
           let iconName;
 
-          if (route.name === "Home") iconName = "home";
-          else if (route.name === "Inventory") iconName = "cube";
-          else if (route.name === "Logout") iconName = "log-out";
-          else if (route.name === "Profile") iconName = "person";
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          }
 
-          return <Icon name={iconName} size={size} color={color} />;
+          else if (route.name === "Inventory") {
+            iconName = focused ? "cube" : "cube-outline";
+          }
+
+          else if (route.name === "Profile") {
+            iconName = focused ? "person" : "person-outline";
+          }
+
+          else if (route.name === "Logout") {
+            iconName = focused ? "log-out" : "log-out-outline";
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
+
+        tabBarActiveTintColor: "#2e7d32",
+        tabBarInactiveTintColor: "gray",
       })}
     >
-
       <Tab.Screen
         name="Home"
         component={ProviderDashboard}
-        options={{ title: t("home") }}
       />
 
       <Tab.Screen
         name="Inventory"
         component={InventoryScreen}
-        options={{ title: t("inventory") }}
-      />
-
-      <Tab.Screen
-        name="Logout"
-        component={LogoutScreen}
-        options={{ title: t("logout") }}
       />
 
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: t("profile") }}
+      />
+
+      <Tab.Screen
+        name="Logout"
+        component={ProviderDashboard}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            handleLogout(navigation);
+          },
+        })}
       />
 
     </Tab.Navigator>
