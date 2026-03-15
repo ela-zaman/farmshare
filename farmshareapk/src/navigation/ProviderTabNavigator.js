@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, Alert, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,8 +13,15 @@ import { logoutUser } from "../firebase/authService";
 const Tab = createBottomTabNavigator();
 
 export default function ProviderTabNavigator() {
+  const { t, i18n } = useTranslation();
+  const [language, setLanguage] = useState(i18n.language || "en");
 
-  const { t } = useTranslation();
+  // Toggle app language
+  const toggleLanguage = () => {
+    const newLang = language === "en" ? "bn" : "en";
+    i18n.changeLanguage(newLang);
+    setLanguage(newLang);
+  };
 
   const handleLogout = async (navigation) => {
     try {
@@ -35,92 +42,49 @@ export default function ProviderTabNavigator() {
         tabBarStyle: styles.tabBar,
 
         tabBarIcon: ({ color, size, focused }) => {
-
           let icon;
 
-          if (route.name === "Home") {
-            icon = focused ? "home" : "home-outline";
-          }
-
-          else if (route.name === "Inventory") {
-            icon = focused ? "cube" : "cube-outline";
-          }
-
-          else if (route.name === "Profile") {
-            icon = focused ? "person" : "person-outline";
-          }
-
-          else if (route.name === "Logout") {
-            icon = focused ? "log-out" : "log-out-outline";
-          }
+          if (route.name === "Home") icon = focused ? "home" : "home-outline";
+          else if (route.name === "Inventory") icon = focused ? "cube" : "cube-outline";
+          else if (route.name === "Profile") icon = focused ? "person" : "person-outline";
+          else if (route.name === "Logout") icon = focused ? "log-out" : "log-out-outline";
+          else if (route.name === "Language") icon = focused ? "language" : "language-outline";
 
           return <Ionicons name={icon} size={size} color={color} />;
         },
 
-        tabBarLabel: ({ focused, color }) => {
-
+        tabBarLabel: ({ color }) => {
           let label = "";
+          if (route.name === "Home") label = t("home");
+          else if (route.name === "Inventory") label = t("inventory");
+          else if (route.name === "Profile") label = t("profile");
+          else if (route.name === "Logout") label = t("logout");
+          else if (route.name === "Language") label = language === "en" ? "বাংলা" : "English";
 
-          if (route.name === "Home") {
-            label = t("home");
-          }
-
-          else if (route.name === "Inventory") {
-            label = t("inventory");
-          }
-
-          else if (route.name === "Profile") {
-            label = t("profile");
-          }
-
-          else if (route.name === "Logout") {
-            label = t("logout");
-          }
-
-          else if (route.name === "AddMachine") {
-            label = "";
-          }
-
-          return (
-            <Text style={{ color: color, fontSize: 12 }}>
-              {label}
-            </Text>
-          );
+          return <Text style={{ color, fontSize: 12 }}>{label}</Text>;
         },
 
         tabBarActiveTintColor: "#2e7d32",
         tabBarInactiveTintColor: "gray"
       })}
     >
+      <Tab.Screen name="Home" component={ProviderDashboard} />
+      <Tab.Screen name="Inventory" component={InventoryScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
 
+      {/* Language Toggle Button */}
       <Tab.Screen
-        name="Home"
-        component={ProviderDashboard}
+        name="Language"
+        component={ProviderDashboard} // dummy, we handle tap
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault(); // prevent navigation
+            toggleLanguage();
+          }
+        })}
       />
 
-      <Tab.Screen
-        name="Inventory"
-        component={InventoryScreen}
-      />
-
-      <Tab.Screen
-        name="AddMachine"
-        component={ProviderDashboard}
-        options={{
-          tabBarLabel: "",
-          tabBarIcon: () => (
-            <View style={styles.fab}>
-              <Ionicons name="add" size={30} color="white" />
-            </View>
-          )
-        }}
-      />
-
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-      />
-
+      {/* Logout */}
       <Tab.Screen
         name="Logout"
         component={ProviderDashboard}
@@ -131,26 +95,21 @@ export default function ProviderTabNavigator() {
           }
         })}
       />
-
     </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-
   tabBar: {
     height: 65,
-    paddingBottom: 8
-  },
-
-  fab: {
-    width: 60,
-    height: 60,
-    backgroundColor: "#2e7d32",
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 30
+    paddingBottom: 16, // increase for gesture/navigation bar
+    paddingTop: 8,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 40, // lift tab bar slightly above system buttons
+    backgroundColor: "#fff",
+    borderTopWidth: 0,
+    elevation: 5 // shadow on Android
   }
-
 });
