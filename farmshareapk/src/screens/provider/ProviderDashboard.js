@@ -3,13 +3,26 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from "rea
 import { useTranslation } from "react-i18next";
 
 const screenWidth = Dimensions.get("window").width;
-const buttonSize = (screenWidth / 2) - 30; // two buttons per row
+const buttonSize = (screenWidth / 2) - 30; // size for square grid buttons
 
-export default function ProfileDashboard({ navigation }) {
+export default function ProviderDashboard({ navigation }) {
   const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
+      {/* Full-width Current Status Button */}
+      <TouchableOpacity 
+        style={styles.fullButton} 
+        onPress={() => alert(t("current_status"))}
+      >
+        <Image 
+          source={require("../../../assets/images/add.png")} 
+          style={styles.fullButtonImage} 
+          resizeMode="contain" 
+        />
+        <Text style={styles.fullButtonText}>{t("current_status")}</Text>
+      </TouchableOpacity>
+
       {/* Row 1 */}
       <View style={styles.row}>
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("AddMachinery")}>
@@ -30,7 +43,7 @@ export default function ProfileDashboard({ navigation }) {
           <Text style={styles.label}>{t("my_bookings")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={() => alert("Fourth Button clicked")}>
+        <TouchableOpacity style={styles.button} onPress={() => alert(t("fourth_button"))}>
           <Image source={require("../../../assets/images/add.png")} style={styles.icon} resizeMode="contain" />
           <Text style={styles.label}>{t("fourth_button")}</Text>
         </TouchableOpacity>
@@ -39,13 +52,13 @@ export default function ProfileDashboard({ navigation }) {
   );
 }
 
-// Define styles
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 15,
     backgroundColor: "#fff",
-    justifyContent: "center"
+    justifyContent: "flex-start"
   },
   row: {
     flexDirection: "row",
@@ -70,5 +83,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     textAlign: "center"
+  },
+  fullButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ADD8E6", // soft blue
+    borderRadius: 10,
+    height: buttonSize,
+    marginBottom: 20,
+    paddingHorizontal: 15
+  },
+  fullButtonImage: {
+    width: buttonSize * 0.6,
+    height: "80%",
+    marginRight: 15
+  },
+  fullButtonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000"
   }
 });
