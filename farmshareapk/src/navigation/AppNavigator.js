@@ -15,6 +15,8 @@ import MyBookingScreen from "../screens/farmer/MyBookingScreen";
 // Provider Screens
 import ProviderTabNavigator from "../navigation/ProviderTabNavigator";
 import AddMachineScreen from "../screens/provider/AddMachineScreen";
+import ProviderNotificationScreen from "../screens/provider/ProviderNotificationScreen";
+import ProviderBookingScreen from "../screens/provider/ProviderBookingScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -52,7 +54,10 @@ export default function AppNavigator() {
         name="ProviderDashboard"
         component={ProviderTabNavigator}
       />
-      <Stack.Screen name="AddMachine" component={AddMachineScreen} />
+      <Stack.Screen name="AddMachinery" component={AddMachineScreen} />
+      <Stack.Screen name="ProviderNotification" component={ProviderNotificationScreen} />
+      <Stack.Screen name="ProviderBookings" component={ProviderBookingScreen} />
+  
     </Stack.Navigator>
   );
 }

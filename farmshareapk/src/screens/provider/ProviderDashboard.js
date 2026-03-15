@@ -17,7 +17,7 @@ export default function ProfileDashboard({ navigation }) {
           <Text style={styles.label}>{t("add_machinery")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("Notification")}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("ProviderNotification")}>
           <Image source={require("../../../assets/images/add.png")} style={styles.icon} resizeMode="contain" />
           <Text style={styles.label}>{t("notification")}</Text>
         </TouchableOpacity>
@@ -25,7 +25,7 @@ export default function ProfileDashboard({ navigation }) {
 
       {/* Row 2 */}
       <View style={styles.row}>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("MyBookings")}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("ProviderBookings")}>
           <Image source={require("../../../assets/images/add.png")} style={styles.icon} resizeMode="contain" />
           <Text style={styles.label}>{t("my_bookings")}</Text>
         </TouchableOpacity>
