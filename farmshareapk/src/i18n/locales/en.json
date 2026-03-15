@@ -11,8 +11,8 @@
   "login": "Login",
   "register": "Register",
   "logout": "Logout",
-  
-  
+  "name":"name",
+  "address":"address", 
   "phone": "Phone Number",
   "password": "Password",
   "error": "Error",
