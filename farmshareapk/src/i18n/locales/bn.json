@@ -25,6 +25,7 @@
   "notification": "নোটিফিকেশন",
   "my_bookings": "আমার বুকিংস",
   "my_contact": "কন্টাক্ট",
-  "current_status": "বর্তমান অবস্থা" 
+  "current_status": "বর্তমান অবস্থা",
+  "check_machine_availability": "মেশিনের বর্তমান অবস্থা দেখুন"
 
 }
