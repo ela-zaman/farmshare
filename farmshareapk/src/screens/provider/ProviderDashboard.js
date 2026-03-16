@@ -13,7 +13,7 @@ export default function ProviderDashboard({ navigation }) {
       {/* Full-width Current Status Button */}
       <TouchableOpacity 
         style={styles.fullButton} 
-        onPress={() => alert(t("current_status"))}
+        onPress={() =>  navigation.navigate("ProviderCurrentStatus")}
       >
         <Image 
           source={require("../../../assets/images/add.png")} 
@@ -43,9 +43,9 @@ export default function ProviderDashboard({ navigation }) {
           <Text style={styles.label}>{t("my_bookings")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={() => alert(t("fourth_button"))}>
+        <TouchableOpacity style={styles.button}onPress={() => navigation.navigate("ProviderMyContact")}>
           <Image source={require("../../../assets/images/add.png")} style={styles.icon} resizeMode="contain" />
-          <Text style={styles.label}>{t("fourth_button")}</Text>
+          <Text style={styles.label}>{t("my_contact")}</Text>
         </TouchableOpacity>
       </View>
     </View>
