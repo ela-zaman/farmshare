@@ -27,6 +27,36 @@
   "my_contact": "Contact",
   "current_status": "Current Status",
   
-  "check_machine_availability": "Check machine availability"
+  "check_machine_availability": "Check machine availability",
+  "add_machine_title": "Add Farm Machinery",
+  "machine_name": "Farm Machinery Name",
+  "enter_machine_name": "Enter Machine Name",
+  "machine_type": "Machinery Type",
+  "select_machine_type": "Select Machine Type",
+  "tractor": "Tractor",
+  "powertiller": "Powertiller",
+  "reaper": "Reaper",
+  "bed_planter": "Bed Planter",
+  "combine_harvester": "Combine Harvester",
+  "thresher": "Thresher",
+  "sprayer": "Sprayer",
+  "charge_type": "Tillage Charge Type",
+  "select_charge_type": "Select Charge Type",
+  "per_decimal": "Per Decimal",
+  "per_bigha": "Per Bigha",
+  "charge": "Tillage Charge",
+  "enter_charge": "Enter Charge",
+  "district": "District",
+  "select_district": "Select District",
+  "upazila": "Upazila",
+  "select_upazila": "Select Upazila",
+  "village": "Village",
+  "enter_village": "Enter Village",
+  "add_machine_button": "Add Machinery",
+  
+  "success": "Success",
+  "user_not_logged_in": "User not logged in",
+  "fill_all_fields": "Please fill all fields",
+  "machine_added": "Machine added successfully"
 
 }

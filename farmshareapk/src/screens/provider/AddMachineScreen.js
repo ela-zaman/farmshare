@@ -13,8 +13,9 @@ import {
 } from "react-native";
 
 import { Picker } from "@react-native-picker/picker";
+import { useTranslation } from "react-i18next";
 
-import { db, auth, storage } from "../../firebase/firebaseConfig";
+import { db, auth } from "../../firebase/firebaseConfig";
 
 import {
   collection,
@@ -25,6 +26,8 @@ import {
 import { bdLocations } from "../../data/bdLocation";
 
 export default function AddMachineScreen() {
+
+  const { t } = useTranslation(); // ✅ ADD THIS
 
   const [name, setName] = useState("");
   const [machineType, setMachineType] = useState("");
@@ -42,13 +45,14 @@ export default function AddMachineScreen() {
   const handleAddMachine = async () => {
     try {
       const user = auth.currentUser;
+
       if (!user) {
-        Alert.alert("Error", "User not logged in");
+        Alert.alert(t("error"), t("user_not_logged_in"));
         return;
       }
 
       if (!name || !machineType || !tillageType || !tillageCharge || !district || !upazilla || !village) {
-        Alert.alert("Error", "Please fill all fields");
+        Alert.alert(t("error"), t("fill_all_fields"));
         return;
       }
 
@@ -65,14 +69,19 @@ export default function AddMachineScreen() {
         createdAt: serverTimestamp()
       });
 
-      Alert.alert("Success", "Machine added successfully");
+      Alert.alert(t("success"), t("machine_added"));
 
-      setName(""); setMachineType(""); setTillageType("");
-      setTillageCharge(""); setDistrict(""); setUpazilla(""); setVillage("");
+      setName(""); 
+      setMachineType(""); 
+      setTillageType("");
+      setTillageCharge(""); 
+      setDistrict(""); 
+      setUpazilla(""); 
+      setVillage("");
 
     } catch (error) {
       console.log("Add Machine Error:", error);
-      Alert.alert("Error", error.message);
+      Alert.alert(t("error"), error.message);
     }
   };
 
@@ -86,53 +95,53 @@ export default function AddMachineScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header with small image */}
+        {/* Header */}
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>Add Farm Machinery</Text>
+          <Text style={styles.header}>{t("add_machine_title")}</Text>
           <Image
-            source={require("../../../assets/images/add.png")} // Replace with your small image
+            source={require("../../../assets/images/add.png")}
             style={styles.headerImage}
           />
         </View>
 
         {/* Machine Name */}
-        <Text style={styles.label}>Farm Machinery Name</Text>
+        <Text style={styles.label}>{t("machine_name")}</Text>
         <TextInput
-          placeholder="Enter Machine Name"
+          placeholder={t("enter_machine_name")}
           value={name}
           onChangeText={setName}
           style={styles.input}
         />
 
         {/* Machine Type */}
-        <Text style={styles.label}>Machinery Type</Text>
+        <Text style={styles.label}>{t("machine_type")}</Text>
         <View style={styles.pickerContainer}>
           <Picker selectedValue={machineType} onValueChange={setMachineType}>
-            <Picker.Item label="Select Machine Type" value="" />
-            <Picker.Item label="Tractor" value="Tractor" />
-            <Picker.Item label="Powertiller" value="Powertiller" />
-            <Picker.Item label="Reaper" value="Reaper" />
-            <Picker.Item label="Bed Planter" value="Bed Planter" />
-            <Picker.Item label="Combine Harvester" value="Combine Harvester" />
-            <Picker.Item label="Thresher" value="Thresher" />
-            <Picker.Item label="Sprayer" value="Sprayer" />
+            <Picker.Item label={t("select_machine_type")} value="" />
+            <Picker.Item label={t("tractor")} value="Tractor" />
+            <Picker.Item label={t("powertiller")} value="Powertiller" />
+            <Picker.Item label={t("reaper")} value="Reaper" />
+            <Picker.Item label={t("bed_planter")} value="Bed Planter" />
+            <Picker.Item label={t("combine_harvester")} value="Combine Harvester" />
+            <Picker.Item label={t("thresher")} value="Thresher" />
+            <Picker.Item label={t("sprayer")} value="Sprayer" />
           </Picker>
         </View>
 
         {/* Charge Type */}
-        <Text style={styles.label}>Tillage Charge Type</Text>
+        <Text style={styles.label}>{t("charge_type")}</Text>
         <View style={styles.pickerContainer}>
           <Picker selectedValue={tillageType} onValueChange={setTillageType}>
-            <Picker.Item label="Select Charge Type" value="" />
-            <Picker.Item label="Per Decimal" value="Per Decimal" />
-            <Picker.Item label="Per Bigha" value="Per Bigha" />
+            <Picker.Item label={t("select_charge_type")} value="" />
+            <Picker.Item label={t("per_decimal")} value="Per Decimal" />
+            <Picker.Item label={t("per_bigha")} value="Per Bigha" />
           </Picker>
         </View>
 
         {/* Charge */}
-        <Text style={styles.label}>Tillage Charge</Text>
+        <Text style={styles.label}>{t("charge")}</Text>
         <TextInput
-          placeholder="Enter Charge"
+          placeholder={t("enter_charge")}
           value={tillageCharge}
           onChangeText={setTillageCharge}
           keyboardType="numeric"
@@ -140,38 +149,42 @@ export default function AddMachineScreen() {
         />
 
         {/* District */}
-        <Text style={styles.label}>District</Text>
+        <Text style={styles.label}>{t("district")}</Text>
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={district}
             onValueChange={(value) => { setDistrict(value); setUpazilla(""); }}
           >
-            <Picker.Item label="Select District" value="" />
-            {districts.map((d) => <Picker.Item key={d} label={d} value={d} />)}
+            <Picker.Item label={t("select_district")} value="" />
+            {districts.map((d) => (
+              <Picker.Item key={d} label={d} value={d} />
+            ))}
           </Picker>
         </View>
 
         {/* Upazila */}
-        <Text style={styles.label}>Upazila</Text>
+        <Text style={styles.label}>{t("upazila")}</Text>
         <View style={styles.pickerContainer}>
           <Picker selectedValue={upazilla} onValueChange={setUpazilla}>
-            <Picker.Item label="Select Upazila" value="" />
-            {upazillas.map((u) => <Picker.Item key={u} label={u} value={u} />)}
+            <Picker.Item label={t("select_upazila")} value="" />
+            {upazillas.map((u) => (
+              <Picker.Item key={u} label={u} value={u} />
+            ))}
           </Picker>
         </View>
 
         {/* Village */}
-        <Text style={styles.label}>Village</Text>
+        <Text style={styles.label}>{t("village")}</Text>
         <TextInput
-          placeholder="Enter Village"
+          placeholder={t("enter_village")}
           value={village}
           onChangeText={setVillage}
           style={styles.input}
         />
 
-        {/* Add Button */}
+        {/* Button */}
         <TouchableOpacity style={styles.addButton} onPress={handleAddMachine}>
-          <Text style={styles.addButtonText}>Add Machinery</Text>
+          <Text style={styles.addButtonText}>{t("add_machine_button")}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 120 }} />
@@ -180,9 +193,7 @@ export default function AddMachineScreen() {
   );
 }
 
-/* --------------------------- */
-/* Styles                      */
-/* --------------------------- */
+/* Styles */
 const styles = StyleSheet.create({
   container: { padding: 20, flexGrow: 1 },
   headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 20 },
