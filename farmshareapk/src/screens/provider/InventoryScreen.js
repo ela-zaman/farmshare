@@ -59,6 +59,7 @@ export default function InventoryScreen() {
     if (type === "sprayer") return require("../../../assets/images/Machines/sprayer.jpg");
     if (type === "thresher") return require("../../../assets/images/Machines/thresher.png");
     if (type === "combine harvester") return require("../../../assets/images/Machines/combine harvester.png");
+    if (type === "bed planter") return require("../../../assets/images/Machines/bed planter.png");
     return require("../../../assets/images/add.png"); // fallback
   };
 
