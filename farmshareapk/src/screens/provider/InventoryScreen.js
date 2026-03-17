@@ -57,11 +57,31 @@ export default function InventoryScreen() {
   }, []);
 
   // 🔥 Dynamic Image Logic
-  const getMachineImage = (name) => {
-    if (name?.toLowerCase() === "tractor") {
-      return require("../../../assets/images/add.png"); // use tractor image if available
+  const getMachineImage = (machineType) => {
+    if (machineType?.toLowerCase() === "tractor") {
+      return require("../../../assets/images/Machines/tractor.png");
+
     }
-    return require("../../../assets/images/add.png"); // default image
+     if (machineType?.toLowerCase() === "powertiller") {
+      return require("../../../assets/images/Machines/powertiller.png");
+      
+    }
+     if (machineType?.toLowerCase() === "reaper") {
+      return require("../../../assets/images/Machines/reaper.png");
+      
+    }
+     if (machineType?.toLowerCase() === "sprayer") {
+      return require("../../../assets/images/Machines/sprayer.jpg");
+      
+    }
+     if (machineType?.toLowerCase() === "thresher") {
+      return require("../../../assets/images/Machines/thresher.png");
+      
+    }
+     if (machineType?.toLowerCase() === "combine harvester") {
+      return require("../../../assets/images/Machines/combine harvester.png");
+      
+    }
   };
 
   return (
@@ -76,20 +96,20 @@ export default function InventoryScreen() {
             key={machine.id}
             style={styles.card}
             onPress={() =>
-              navigation.navigate("MachineDetails", {
+              navigation.navigate("ProviderMachineDetails", {
                 machineId: machine.id
               })
             }
           >
             {/* Image */}
             <Image
-              source={getMachineImage(machine.name)}
+              source={getMachineImage(machine.machineType)}
               style={styles.image}
             />
 
             {/* Info */}
             <View style={styles.info}>
-              <Text style={styles.name}>
+              <Text style={styles.machineType}>
                 {machine.name}
               </Text>
 

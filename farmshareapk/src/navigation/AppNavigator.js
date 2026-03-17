@@ -19,6 +19,8 @@ import ProviderNotificationScreen from "../screens/provider/ProviderNotification
 import ProviderBookingScreen from "../screens/provider/ProviderBookingScreen";
 import ProviderCurrentStatus from "../screens/provider/ProviderCurrentStatus"
 import ProviderMyContact  from "../screens/provider/ProviderMyContact";
+import ProviderMachineDetails from "../screens/provider/ProviderMachineDetails";
+import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
 
 const Stack = createNativeStackNavigator();
 
@@ -61,6 +63,9 @@ export default function AppNavigator() {
       <Stack.Screen name="ProviderNotification" component={ProviderNotificationScreen} />
       <Stack.Screen name="ProviderBookings" component={ProviderBookingScreen} />
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
+      <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
+      <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
+     
   
     </Stack.Navigator>
   );

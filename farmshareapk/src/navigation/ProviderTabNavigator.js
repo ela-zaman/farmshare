@@ -5,24 +5,24 @@ import { View, Alert, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
+// Screens
 import ProviderDashboard from "../screens/provider/ProviderDashboard";
 import InventoryScreen from "../screens/provider/InventoryScreen";
 import ProfileScreen from "../screens/common/ProfileScreen";
 
-// Other provider screens
 import AddMachineScreen from "../screens/provider/AddMachineScreen";
 import ProviderNotificationScreen from "../screens/provider/ProviderNotificationScreen";
 import ProviderBookingScreen from "../screens/provider/ProviderBookingScreen";
 import ProviderCurrentStatus from "../screens/provider/ProviderCurrentStatus";
 import ProviderMyContact from "../screens/provider/ProviderMyContact";
 
-import { logoutUser } from "../firebase/authService";
+import ProviderMachineDetails from "../screens/provider/ProviderMachineDetails";
+import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
 
+import { logoutUser } from "../firebase/authService";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-
 
 /* ---------------- HOME STACK ---------------- */
 
@@ -35,16 +35,31 @@ function HomeStack() {
       <Stack.Screen name="ProviderBookings" component={ProviderBookingScreen} />
       <Stack.Screen name="ProviderCurrentStatus" component={ProviderCurrentStatus} />
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
+
+      {/* ✅ Shared Screens */}
+      <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
+      <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
     </Stack.Navigator>
   );
 }
 
+/* ---------------- INVENTORY STACK ---------------- */
 
+function InventoryStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="InventoryMain" component={InventoryScreen} />
+
+      {/* ✅ SAME shared screens */}
+      <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
+      <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
+    </Stack.Navigator>
+  );
+}
 
 /* ---------------- TAB NAVIGATOR ---------------- */
 
 export default function ProviderTabNavigator() {
-
   const { t, i18n } = useTranslation();
   const [language, setLanguage] = useState(i18n.language || "en");
 
@@ -57,26 +72,22 @@ export default function ProviderTabNavigator() {
   const handleLogout = async (navigation) => {
     try {
       await logoutUser();
-
       navigation.reset({
         index: 0,
         routes: [{ name: "Login" }]
       });
-
     } catch (error) {
       Alert.alert("Logout Failed", error.message);
     }
   };
 
   return (
-
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: styles.tabBar,
 
         tabBarIcon: ({ color, size, focused }) => {
-
           let icon;
 
           if (route.name === "Home") icon = focused ? "home" : "home-outline";
@@ -89,7 +100,6 @@ export default function ProviderTabNavigator() {
         },
 
         tabBarLabel: ({ color }) => {
-
           let label = "";
 
           if (route.name === "Home") label = t("home");
@@ -106,22 +116,15 @@ export default function ProviderTabNavigator() {
       })}
     >
 
-      {/* Home Tab */}
+      {/* ✅ FIXED */}
       <Tab.Screen name="Home" component={HomeStack} />
-
-      {/* Inventory */}
-      <Tab.Screen name="Inventory" component={InventoryScreen} />
-
-      {/* Profile */}
+      <Tab.Screen name="Inventory" component={InventoryStack} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
 
-
-
-      {/* Language Toggle */}
-
+      {/* Language */}
       <Tab.Screen
         name="Language"
-        component={ProviderDashboard}
+        component={View}
         listeners={() => ({
           tabPress: (e) => {
             e.preventDefault();
@@ -130,12 +133,10 @@ export default function ProviderTabNavigator() {
         })}
       />
 
-
       {/* Logout */}
-
       <Tab.Screen
         name="Logout"
-        component={ProviderDashboard}
+        component={View}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
@@ -148,10 +149,9 @@ export default function ProviderTabNavigator() {
   );
 }
 
-
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-
   tabBar: {
     height: 65,
     paddingBottom: 16,
@@ -164,5 +164,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     elevation: 5
   }
-
 });
