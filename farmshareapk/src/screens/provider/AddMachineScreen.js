@@ -16,19 +16,20 @@ import { Picker } from "@react-native-picker/picker";
 import { useTranslation } from "react-i18next";
 
 import { db, auth } from "../../firebase/firebaseConfig";
-
-import {
-  collection,
-  addDoc,
-  serverTimestamp
-} from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 import { bdLocations } from "../../data/bdLocation";
 
 export default function AddMachineScreen() {
 
-  const { t } = useTranslation(); // ✅ ADD THIS
+  /* -------------------- */
+  /* Translation Setup    */
+  /* -------------------- */
+  const { t, i18n } = useTranslation();
 
+  /* -------------------- */
+  /* State Variables      */
+  /* -------------------- */
   const [name, setName] = useState("");
   const [machineType, setMachineType] = useState("");
   const [tillageType, setTillageType] = useState("");
@@ -39,8 +40,43 @@ export default function AddMachineScreen() {
   const [village, setVillage] = useState("");
 
   const scrollViewRef = useRef(null);
+
+  /* -------------------- */
+  /* Location Data        */
+  /* -------------------- */
+
+  // All districts (keys)
   const districts = Object.keys(bdLocations);
-  const upazillas = district ? bdLocations[district] : [];
+
+  // Selected district object
+  const selectedDistrict = bdLocations[district];
+
+  // Upazilas of selected district
+  const upazillas = selectedDistrict ? selectedDistrict.upazilas : [];
+
+  /* -------------------- */
+  /* Helper Functions     */
+  /* -------------------- */
+
+  // Show district name based on language
+  const getDistrictLabel = (districtKey) => {
+    if (!districtKey) return "";
+    return i18n.language === "bn"
+      ? bdLocations[districtKey].bn
+      : districtKey;
+  };
+
+  // Show upazila name based on language
+  const getUpazilaLabel = (upazilaObj) => {
+    if (!upazilaObj) return "";
+    return i18n.language === "bn"
+      ? upazilaObj.bn
+      : upazilaObj.en;
+  };
+
+  /* -------------------- */
+  /* Add Machine Function */
+  /* -------------------- */
 
   const handleAddMachine = async () => {
     try {
@@ -51,18 +87,28 @@ export default function AddMachineScreen() {
         return;
       }
 
-      if (!name || !machineType || !tillageType || !tillageCharge || !district || !upazilla || !village) {
+      // Validation
+      if (
+        !name ||
+        !machineType ||
+        !tillageType ||
+        !tillageCharge ||
+        !district ||
+        !upazilla ||
+        !village
+      ) {
         Alert.alert(t("error"), t("fill_all_fields"));
         return;
       }
 
+      // Save to Firestore
       await addDoc(collection(db, "machines"), {
         name: name.trim(),
         machineType,
         tillageType,
         tillageCharge,
-        district,
-        upazilla,
+        district,     // stored in English (key)
+        upazilla,     // stored in English
         village,
         providerId: user.uid,
         providerEmail: user.email,
@@ -71,12 +117,13 @@ export default function AddMachineScreen() {
 
       Alert.alert(t("success"), t("machine_added"));
 
-      setName(""); 
-      setMachineType(""); 
+      // Reset form
+      setName("");
+      setMachineType("");
       setTillageType("");
-      setTillageCharge(""); 
-      setDistrict(""); 
-      setUpazilla(""); 
+      setTillageCharge("");
+      setDistrict("");
+      setUpazilla("");
       setVillage("");
 
     } catch (error) {
@@ -84,6 +131,10 @@ export default function AddMachineScreen() {
       Alert.alert(t("error"), error.message);
     }
   };
+
+  /* -------------------- */
+  /* UI                  */
+  /* -------------------- */
 
   return (
     <KeyboardAvoidingView
@@ -95,6 +146,7 @@ export default function AddMachineScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
+
         {/* Header */}
         <View style={styles.headerContainer}>
           <Text style={styles.header}>{t("add_machine_title")}</Text>
@@ -153,11 +205,18 @@ export default function AddMachineScreen() {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={district}
-            onValueChange={(value) => { setDistrict(value); setUpazilla(""); }}
+            onValueChange={(value) => {
+              setDistrict(value);
+              setUpazilla(""); // reset upazila
+            }}
           >
             <Picker.Item label={t("select_district")} value="" />
             {districts.map((d) => (
-              <Picker.Item key={d} label={d} value={d} />
+              <Picker.Item
+                key={d}
+                label={getDistrictLabel(d)}
+                value={d}   // always store English key
+              />
             ))}
           </Picker>
         </View>
@@ -165,10 +224,17 @@ export default function AddMachineScreen() {
         {/* Upazila */}
         <Text style={styles.label}>{t("upazila")}</Text>
         <View style={styles.pickerContainer}>
-          <Picker selectedValue={upazilla} onValueChange={setUpazilla}>
+          <Picker
+            selectedValue={upazilla}
+            onValueChange={setUpazilla}
+          >
             <Picker.Item label={t("select_upazila")} value="" />
             {upazillas.map((u) => (
-              <Picker.Item key={u} label={u} value={u} />
+              <Picker.Item
+                key={u.en}
+                label={getUpazilaLabel(u)}
+                value={u.en}   // ✅ ALWAYS STORE ENGLISH (IMPORTANT FIX)
+              />
             ))}
           </Picker>
         </View>
@@ -182,9 +248,14 @@ export default function AddMachineScreen() {
           style={styles.input}
         />
 
-        {/* Button */}
-        <TouchableOpacity style={styles.addButton} onPress={handleAddMachine}>
-          <Text style={styles.addButtonText}>{t("add_machine_button")}</Text>
+        {/* Add Button */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={handleAddMachine}
+        >
+          <Text style={styles.addButtonText}>
+            {t("add_machine_button")}
+          </Text>
         </TouchableOpacity>
 
         <View style={{ height: 120 }} />
@@ -193,15 +264,65 @@ export default function AddMachineScreen() {
   );
 }
 
-/* Styles */
+/* -------------------- */
+/* Styles               */
+/* -------------------- */
+
 const styles = StyleSheet.create({
-  container: { padding: 20, flexGrow: 1 },
-  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 20 },
-  header: { fontSize: 22, fontWeight: "bold", marginRight: 10 },
-  headerImage: { width: 24, height: 24, resizeMode: "contain" },
-  label: { fontWeight: "bold", marginTop: 10 },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, borderRadius: 5, marginBottom: 10 },
-  pickerContainer: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, marginBottom: 10 },
-  addButton: { backgroundColor: "#4CAF50", padding: 15, borderRadius: 30, alignItems: "center", marginTop: 20 },
-  addButtonText: { color: "#fff", fontWeight: "bold" }
+  container: {
+    padding: 20,
+    flexGrow: 1
+  },
+
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20
+  },
+
+  header: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginRight: 10
+  },
+
+  headerImage: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain"
+  },
+
+  label: {
+    fontWeight: "bold",
+    marginTop: 10
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10
+  },
+
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    marginBottom: 10
+  },
+
+  addButton: {
+    backgroundColor: "#4CAF50",
+    padding: 15,
+    borderRadius: 30,
+    alignItems: "center",
+    marginTop: 20
+  },
+
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "bold"
+  }
 });
