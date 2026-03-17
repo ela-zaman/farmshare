@@ -4,24 +4,27 @@ import {
   Text,
   StyleSheet,
   Image,
-  TouchableOpacity
+  TouchableOpacity,
+  ScrollView
 } from "react-native";
-
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
+import { MaterialIcons, FontAwesome5, Entypo } from "@expo/vector-icons";
+import { bdLocations } from "../../data/bdLocation"; // import your bdLocations file
 
 export default function ProviderMachineDetails() {
   const [machine, setMachine] = useState(null);
   const navigation = useNavigation();
   const route = useRoute();
+  const { t, i18n } = useTranslation();
 
   const { machineId } = route.params;
 
   useEffect(() => {
     const docRef = doc(db, "machines", machineId);
 
-    // 🔥 REAL-TIME LISTENER
     const unsubscribe = onSnapshot(
       docRef,
       (docSnap) => {
@@ -32,123 +35,150 @@ export default function ProviderMachineDetails() {
           });
         }
       },
-      (error) => {
-        console.log("Realtime error:", error);
-      }
+      (error) => console.log("Realtime error:", error)
     );
 
     return () => unsubscribe();
   }, []);
 
   const getImage = (machineType) => {
-    if (machineType?.toLowerCase() === "tractor") {
-      return require("../../../assets/images/Machines/tractor.png");
-
-    }
-     if (machineType?.toLowerCase() === "powertiller") {
-      return require("../../../assets/images/Machines/powertiller.png");
-      
-    }
-     if (machineType?.toLowerCase() === "reaper") {
-      return require("../../../assets/images/Machines/reaper.png");
-      
-    }
-     if (machineType?.toLowerCase() === "sprayer") {
-      return require("../../../assets/images/Machines/sprayer.jpg");
-      
-    }
-     if (machineType?.toLowerCase() === "thresher") {
-      return require("../../../assets/images/Machines/thresher.png");
-      
-    }
-     if (machineType?.toLowerCase() === "combine harvester") {
-      return require("../../../assets/images/Machines/combine harvester.png");
-      
-    }
-
-    
-    
+    if (!machineType) return require("../../../assets/images/add.png");
+    const type = machineType.toLowerCase();
+    if (type === "tractor") return require("../../../assets/images/Machines/tractor.png");
+    if (type === "powertiller") return require("../../../assets/images/Machines/powertiller.png");
+    if (type === "reaper") return require("../../../assets/images/Machines/reaper.png");
+    if (type === "sprayer") return require("../../../assets/images/Machines/sprayer.jpg");
+    if (type === "thresher") return require("../../../assets/images/Machines/thresher.png");
+    if (type === "combine harvester") return require("../../../assets/images/Machines/combine harvester.png");
+    if (type === "bed planter") return require("../../../assets/images/Machines/bed planter.png");
+    return require("../../../assets/images/add.png");
   };
 
   if (!machine) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <Text>{t("loading") || "Loading..."}</Text>
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
+  /* ------------------- */
+  /* Map district/upazilla */
+  /* ------------------- */
+  const getDistrictBn = (districtEn) => {
+    return bdLocations[districtEn]?.bn || districtEn;
+  };
 
-      {/* 🔵 Circle Image */}
+  const getUpazillaBn = (districtEn, upazillaEn) => {
+    const district = bdLocations[districtEn];
+    if (!district) return upazillaEn;
+    const upazilla = district.upazilas.find(u => u.en === upazillaEn);
+    return upazilla ? upazilla.bn : upazillaEn;
+  };
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 50 }}
+    >
       <Image
         source={getImage(machine.machineType)}
         style={styles.image}
+        resizeMode="contain"
       />
 
-      {/* 🔥 Machine Info */}
       <Text style={styles.name}>{machine.machineType}</Text>
 
-      <Text style={styles.info}>
-        Type: {machine.machineType}
-      </Text>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="build" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>{t("type")}: {machine.machineType}</Text>
+      </View>
 
-      <Text style={styles.info}>
-        Tillage Type: {machine.tillageType}
-      </Text>
+      <View style={styles.infoRow}>
+        <FontAwesome5 name="seedling" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>{t("tillage_type")}: {machine.tillageType}</Text>
+      </View>
 
-      <Text style={styles.info}>
-        Charge: {machine.tillageCharge}
-      </Text>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="attach-money" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>{t("charge")}: {machine.tillageCharge}</Text>
+      </View>
 
-      <Text style={styles.info}>
-        Village: {machine.village}
-      </Text>
+      <View style={styles.infoRow}>
+        <Entypo name="home" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>{t("village")}: {machine.village}</Text>
+      </View>
 
-      {/* ✏️ Edit Button */}
+      <View style={styles.infoRow}>
+        <MaterialIcons name="location-on" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>
+          {t("upazilla")}: {i18n.language === "bn" ? getUpazillaBn(machine.district, machine.upazilla) : machine.upazilla}
+        </Text>
+      </View>
+
+      <View style={styles.infoRow}>
+        <MaterialIcons name="location-city" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>
+          {t("district")}: {i18n.language === "bn" ? getDistrictBn(machine.district) : machine.district}
+        </Text>
+      </View>
+
       <TouchableOpacity
         style={styles.button}
         onPress={() =>
-          navigation.navigate("ProviderEditMachine", {
-            machine: machine
-          })
+          navigation.navigate("ProviderEditMachine", { machine })
         }
       >
-        <Text style={styles.buttonText}>
-          Edit Details
-        </Text>
+        <Text style={styles.buttonText}>{t("edit_details") || "Edit Details"}</Text>
       </TouchableOpacity>
-
-    </View>
+    </ScrollView>
   );
 }
-
-/* ---------------- Styles ---------------- */
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
     padding: 20,
+    backgroundColor: "#f5f5f5",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   image: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: "100%",
+    height: 250,
     marginBottom: 20,
+    borderRadius: 12,
+    backgroundColor: "#fff"
   },
 
   name: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 20,
+    textAlign: "center"
   },
 
-  info: {
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 10,
+  },
+
+  icon: {
+    marginRight: 10,
+  },
+
+  infoText: {
     fontSize: 16,
-    marginBottom: 5,
+    color: "#333"
   },
 
   button: {
@@ -156,10 +186,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     padding: 12,
     borderRadius: 25,
+    alignItems: "center",
   },
 
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
+    fontSize: 16
   },
 });
