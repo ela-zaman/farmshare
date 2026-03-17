@@ -18,8 +18,10 @@ import ProviderMyContact from "../screens/provider/ProviderMyContact";
 
 import ProviderMachineDetails from "../screens/provider/ProviderMachineDetails";
 import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
+import ProviderProfileScreen from "../screens/provider/ProviderProfileScreen";
 
 import { logoutUser } from "../firebase/authService";
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -92,7 +94,7 @@ export default function ProviderTabNavigator() {
 
           if (route.name === "Home") icon = focused ? "home" : "home-outline";
           else if (route.name === "Inventory") icon = focused ? "cube" : "cube-outline";
-          else if (route.name === "Profile") icon = focused ? "person" : "person-outline";
+          else if (route.name === "ProviderProfileScreen") icon = focused ? "person" : "person-outline";
           else if (route.name === "Logout") icon = focused ? "log-out" : "log-out-outline";
           else if (route.name === "Language") icon = focused ? "language" : "language-outline";
 
@@ -104,7 +106,7 @@ export default function ProviderTabNavigator() {
 
           if (route.name === "Home") label = t("home");
           else if (route.name === "Inventory") label = t("inventory");
-          else if (route.name === "Profile") label = t("profile");
+          else if (route.name === "ProviderProfileScreen") label = t("profile");
           else if (route.name === "Logout") label = t("logout");
           else if (route.name === "Language") label = language === "en" ? "বাংলা" : "English";
 
@@ -119,7 +121,7 @@ export default function ProviderTabNavigator() {
       {/* ✅ FIXED */}
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Inventory" component={InventoryStack} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="ProviderProfileScreen" component={ProviderProfileScreen} />
 
       {/* Language */}
       <Tab.Screen

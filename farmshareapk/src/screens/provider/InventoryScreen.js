@@ -70,7 +70,10 @@ export default function InventoryScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 120 }} // extra scroll space
+    >
       {machines.length === 0 ? (
         <Text style={styles.emptyText}>{t("no_machines")}</Text>
       ) : (

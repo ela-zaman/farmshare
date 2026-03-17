@@ -11,8 +11,8 @@
   "login": "Login",
   "register": "Register",
   "logout": "Logout",
-  "name":"name",
-  "address":"address", 
+  "name":"Name",
+  "address":"Address", 
   "phone": "Phone Number",
   "password": "Password",
   "error": "Error",
@@ -59,6 +59,7 @@
   "fill_all_fields": "Please fill all fields",
   "machine_added": "Machine added successfully",
    "no_machines": "No machines added yet",
+   "role":"Role"
   
  
 

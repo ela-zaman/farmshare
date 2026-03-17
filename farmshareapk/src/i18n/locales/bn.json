@@ -56,6 +56,7 @@
   "success": "সফল",
   "user_not_logged_in": "ব্যবহারকারী লগইন করা নেই",
   "fill_all_fields": "সব ঘর পূরণ করুন",
-  "machine_added": "যন্ত্র সফলভাবে যোগ হয়েছে"
+  "machine_added": "যন্ত্র সফলভাবে যোগ হয়েছে",
+  "role":"রোল"
 
 }
