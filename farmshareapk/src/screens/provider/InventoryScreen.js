@@ -17,26 +17,23 @@ import {
 
 import { db, auth } from "../../firebase/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 
 export default function InventoryScreen() {
   const [machines, setMachines] = useState([]);
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
+  // 🔥 Fetch Machines
   useEffect(() => {
     const user = auth.currentUser;
+    if (!user) return;
 
-    if (!user) {
-      console.log("User not logged in");
-      return;
-    }
-
-    // 🔥 Query only current user's machines
     const q = query(
       collection(db, "machines"),
       where("providerId", "==", user.uid)
     );
 
-    // 🔥 Real-time listener
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
@@ -44,61 +41,45 @@ export default function InventoryScreen() {
           id: doc.id,
           ...doc.data()
         }));
-
         setMachines(machineList);
       },
-      (error) => {
-        console.log("Realtime error:", error);
-      }
+      (error) => console.log("Realtime error:", error)
     );
 
-    // Cleanup listener when leaving screen
     return () => unsubscribe();
   }, []);
 
-  // 🔥 Dynamic Image Logic
+  // 🔥 Image Logic
   const getMachineImage = (machineType) => {
-    if (machineType?.toLowerCase() === "tractor") {
-      return require("../../../assets/images/Machines/tractor.png");
+    if (!machineType) return require("../../../assets/images/add.png");
+    const type = machineType.toLowerCase();
+    if (type === "tractor") return require("../../../assets/images/Machines/tractor.png");
+    if (type === "powertiller") return require("../../../assets/images/Machines/powertiller.png");
+    if (type === "reaper") return require("../../../assets/images/Machines/reaper.png");
+    if (type === "sprayer") return require("../../../assets/images/Machines/sprayer.jpg");
+    if (type === "thresher") return require("../../../assets/images/Machines/thresher.png");
+    if (type === "combine harvester") return require("../../../assets/images/Machines/combine harvester.png");
+    return require("../../../assets/images/add.png"); // fallback
+  };
 
-    }
-     if (machineType?.toLowerCase() === "powertiller") {
-      return require("../../../assets/images/Machines/powertiller.png");
-      
-    }
-     if (machineType?.toLowerCase() === "reaper") {
-      return require("../../../assets/images/Machines/reaper.png");
-      
-    }
-     if (machineType?.toLowerCase() === "sprayer") {
-      return require("../../../assets/images/Machines/sprayer.jpg");
-      
-    }
-     if (machineType?.toLowerCase() === "thresher") {
-      return require("../../../assets/images/Machines/thresher.png");
-      
-    }
-     if (machineType?.toLowerCase() === "combine harvester") {
-      return require("../../../assets/images/Machines/combine harvester.png");
-      
-    }
+  // 🔥 Translate Machine Type
+  const getMachineTypeLabel = (type) => {
+    if (!type) return "";
+    const key = type.toLowerCase().replace(/\s/g, "_");
+    return t(key);
   };
 
   return (
     <ScrollView style={styles.container}>
       {machines.length === 0 ? (
-        <Text style={styles.emptyText}>
-          No machines added yet
-        </Text>
+        <Text style={styles.emptyText}>{t("no_machines")}</Text>
       ) : (
         machines.map((machine) => (
           <TouchableOpacity
             key={machine.id}
             style={styles.card}
             onPress={() =>
-              navigation.navigate("ProviderMachineDetails", {
-                machineId: machine.id
-              })
+              navigation.navigate("ProviderMachineDetails", { machineId: machine.id })
             }
           >
             {/* Image */}
@@ -109,16 +90,22 @@ export default function InventoryScreen() {
 
             {/* Info */}
             <View style={styles.info}>
+              {/* Machine Type (Translated, Bigger + Bold) */}
               <Text style={styles.machineType}>
-                {machine.name}
+                {getMachineTypeLabel(machine.machineType)}
               </Text>
 
+              {/* Charge Type (Translated) */}
               <Text style={styles.chargeType}>
-                Type: {machine.tillageType}
+                {t("type")}:{" "}
+                {machine.tillageType?.toLowerCase() === "per decimal"
+                  ? t("per_decimal")
+                  : t("per_bigha")}
               </Text>
 
+              {/* Charge */}
               <Text style={styles.chargeInfo}>
-                Charge: {machine.tillageCharge}
+                {t("charge")}: {machine.tillageCharge}
               </Text>
             </View>
           </TouchableOpacity>
@@ -131,7 +118,6 @@ export default function InventoryScreen() {
 /* --------------------------- */
 /* Styles                      */
 /* --------------------------- */
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -149,11 +135,11 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#d0e6ff", // soft blue
+    backgroundColor: "#d0e6ff",
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
-    elevation: 2 // slight shadow (Android)
+    elevation: 2
   },
 
   image: {
@@ -167,10 +153,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  name: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 2
+  machineType: {
+    fontSize: 16,  // 2px bigger
+    fontWeight: "bold", // bold
+    color: "#666",
+    marginBottom: 4
   },
 
   chargeType: {

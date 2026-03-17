@@ -40,7 +40,7 @@
   "combine_harvester": "Combine Harvester",
   "thresher": "Thresher",
   "sprayer": "Sprayer",
-  "charge_type": "Tillage Charge Type",
+  "type": "Tillage Charge Type",
   "select_charge_type": "Select Charge Type",
   "per_decimal": "Per Decimal",
   "per_bigha": "Per Bigha",
@@ -57,6 +57,9 @@
   "success": "Success",
   "user_not_logged_in": "User not logged in",
   "fill_all_fields": "Please fill all fields",
-  "machine_added": "Machine added successfully"
+  "machine_added": "Machine added successfully",
+   "no_machines": "No machines added yet",
+  
+ 
 
 }

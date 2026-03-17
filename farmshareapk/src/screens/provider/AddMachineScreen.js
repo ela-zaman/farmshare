@@ -16,7 +16,13 @@ import { Picker } from "@react-native-picker/picker";
 import { useTranslation } from "react-i18next";
 
 import { db, auth } from "../../firebase/firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  getDoc
+} from "firebase/firestore";
 
 import { bdLocations } from "../../data/bdLocation";
 
@@ -45,20 +51,14 @@ export default function AddMachineScreen() {
   /* Location Data        */
   /* -------------------- */
 
-  // All districts (keys)
   const districts = Object.keys(bdLocations);
-
-  // Selected district object
   const selectedDistrict = bdLocations[district];
-
-  // Upazilas of selected district
   const upazillas = selectedDistrict ? selectedDistrict.upazilas : [];
 
   /* -------------------- */
   /* Helper Functions     */
   /* -------------------- */
 
-  // Show district name based on language
   const getDistrictLabel = (districtKey) => {
     if (!districtKey) return "";
     return i18n.language === "bn"
@@ -66,7 +66,6 @@ export default function AddMachineScreen() {
       : districtKey;
   };
 
-  // Show upazila name based on language
   const getUpazilaLabel = (upazilaObj) => {
     if (!upazilaObj) return "";
     return i18n.language === "bn"
@@ -101,15 +100,38 @@ export default function AddMachineScreen() {
         return;
       }
 
-      // Save to Firestore
+      /* ---------------------------------- */
+      /* 🔥 GET USER PHONE                 */
+      /* ---------------------------------- */
+
+      let phone = "";
+
+      // Case 1: Firebase Phone Auth
+      if (user.phone) {
+        phone = user.phone;
+      } else {
+        // Case 2: Firestore users collection
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          phone = userSnap.data().phone || "";
+        }
+      }
+
+      /* ---------------------------------- */
+      /* SAVE TO FIREBASE                   */
+      /* ---------------------------------- */
+
       await addDoc(collection(db, "machines"), {
         name: name.trim(),
         machineType,
         tillageType,
         tillageCharge,
-        district,     // stored in English (key)
-        upazilla,     // stored in English
-        village,
+        phone: phone, // ✅ AUTO STORED
+        district,
+        upazilla,
+        village: village.trim(),
         providerId: user.uid,
         providerEmail: user.email,
         createdAt: serverTimestamp()
@@ -117,7 +139,7 @@ export default function AddMachineScreen() {
 
       Alert.alert(t("success"), t("machine_added"));
 
-      // Reset form
+      /* Reset form */
       setName("");
       setMachineType("");
       setTillageType("");
@@ -207,7 +229,7 @@ export default function AddMachineScreen() {
             selectedValue={district}
             onValueChange={(value) => {
               setDistrict(value);
-              setUpazilla(""); // reset upazila
+              setUpazilla("");
             }}
           >
             <Picker.Item label={t("select_district")} value="" />
@@ -215,7 +237,7 @@ export default function AddMachineScreen() {
               <Picker.Item
                 key={d}
                 label={getDistrictLabel(d)}
-                value={d}   // always store English key
+                value={d}
               />
             ))}
           </Picker>
@@ -233,7 +255,7 @@ export default function AddMachineScreen() {
               <Picker.Item
                 key={u.en}
                 label={getUpazilaLabel(u)}
-                value={u.en}   // ✅ ALWAYS STORE ENGLISH (IMPORTANT FIX)
+                value={u.en}
               />
             ))}
           </Picker>
