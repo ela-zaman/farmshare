@@ -21,6 +21,7 @@ import ProviderCurrentStatus from "../screens/provider/ProviderCurrentStatus"
 import ProviderMyContact  from "../screens/provider/ProviderMyContact";
 import ProviderMachineDetails from "../screens/provider/ProviderMachineDetails";
 import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
+import ProviderBookingRequests from "../screens/provider/ProviderBookingRequests";
 
 const Stack = createNativeStackNavigator();
 
@@ -65,7 +66,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
       <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
       <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
-     
+     <Stack.Screen name="ProviderBookingRequests" component={ProviderBookingRequests} />
   
     </Stack.Navigator>
   );

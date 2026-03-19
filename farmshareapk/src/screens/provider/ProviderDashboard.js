@@ -18,37 +18,28 @@ export default function ProviderDashboard({ navigation }) {
   const { t } = useTranslation();
 
   return (
-
     <ScrollView style={styles.container}>
 
       {/* CURRENT STATUS CARD */}
-
       <TouchableOpacity
         style={styles.statusCard}
         onPress={() => navigation.navigate("ProviderCurrentStatus")}
       >
-
         <Image
           source={require("../../../assets/images/Dashboard/Current Status.png")}
           style={styles.statusImage}
           resizeMode="contain"
         />
-
         <View>
           <Text style={styles.statusTitle}>{t("current_status")}</Text>
-
           <Text style={styles.statusSubtitle}>
             {t("check_machine_availability")}
           </Text>
         </View>
-
       </TouchableOpacity>
 
-
       {/* ROW 1 */}
-
       <View style={styles.row}>
-
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate("AddMachinery")}
@@ -58,73 +49,67 @@ export default function ProviderDashboard({ navigation }) {
             style={styles.icon}
             resizeMode="contain"
           />
-
           <Text style={styles.label}>{t("add_machinery")}</Text>
-
         </TouchableOpacity>
-
 
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate("ProviderNotification")}
         >
-
           <Image
             source={require("../../../assets/images/Dashboard/notify.png")}
             style={styles.icon}
             resizeMode="contain"
           />
-
           <Text style={styles.label}>{t("notification")}</Text>
-
         </TouchableOpacity>
-
       </View>
 
-
       {/* ROW 2 */}
-
       <View style={styles.row}>
-
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate("ProviderBookings")}
         >
-
           <Image
             source={require("../../../assets/images/Dashboard/bookings.png")}
             style={styles.icon}
             resizeMode="contain"
           />
-
           <Text style={styles.label}>{t("my_bookings")}</Text>
-
         </TouchableOpacity>
-
 
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate("ProviderMyContact")}
         >
-
           <Image
             source={require("../../../assets/images/Dashboard/contact.png")}
             style={styles.icon}
             resizeMode="contain"
           />
-
           <Text style={styles.label}>{t("my_contact")}</Text>
-
         </TouchableOpacity>
+      </View>
 
+      {/* CARD BUTTON BELOW GRID */}
+      <View style={{ marginBottom: 20 }}>
+        <TouchableOpacity
+          style={styles.cardButton}
+          onPress={() => navigation.navigate("ProviderBookingRequests")}
+        >
+          <Image
+            source={require("../../../assets/Dashboard/inventory.jpg")}
+            style={styles.cardIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.cardLabel}>{t("booking_requests")}</Text>
+        </TouchableOpacity>
       </View>
 
     </ScrollView>
-
   );
 }
-
-
 
 const styles = StyleSheet.create({
 
@@ -134,9 +119,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff"
   },
 
-
   /* STATUS CARD */
-
   statusCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -169,9 +152,7 @@ const styles = StyleSheet.create({
     marginTop: 4
   },
 
-
   /* GRID */
-
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -205,6 +186,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     textAlign: "center"
+  },
+
+  /* CARD BUTTON BELOW GRID */
+  cardButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ADD8E6", // soft blue
+    borderRadius: 12,
+    padding: 15,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 4
+  },
+
+  cardIcon: {
+    width: 50,
+    height: 50,
+    marginRight: 15
+  },
+
+  cardLabel: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000"
   }
 
 });

@@ -59,7 +59,8 @@
   "fill_all_fields": "Please fill all fields",
   "machine_added": "Machine added successfully",
    "no_machines": "No machines added yet",
-   "role":"Role"
+   "role":"Role",
+   "booking_requests": "Booking Request"
   
  
 
