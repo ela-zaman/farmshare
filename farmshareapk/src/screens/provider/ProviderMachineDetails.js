@@ -90,7 +90,7 @@ export default function ProviderMachineDetails() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
       
       {/* Image */}
       <Image

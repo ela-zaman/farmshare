@@ -14,7 +14,7 @@ export default function SplashScreen({ navigation }) {
 
   return (
     <ImageBackground
-      source={require("G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/backgroun.jpeg")}
+      source={require("../../../assets/images/backgroun.jpeg")}
       style={styles.container}
       resizeMode="cover"  // Ensures background fills the screen
     >

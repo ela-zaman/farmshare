@@ -12,15 +12,15 @@ const IntroSlider = ({ navigation }) => {
   // Slides with translation keys
   const slides = [
     {
-      image: require('G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/introslider/intro1_.jpeg'),
+      image: require('../../../assets/images/introslider/intro1_.jpeg'),
       textKey: 'rent_machine',
     },
     {
-      image: require('G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/introslider/intro2.jpeg'),
+      image: require('../../../assets/images/introslider/intro2.jpeg'),
       textKey: 'earn_machine',
     },
     {
-      image: require('G:/Farm-Share Ap/farmshare/farmshareapk/assets/images/introslider/intro3.jpeg'),
+      image: require('../../../assets/images/introslider/intro3.jpeg'),
       textKey: 'maximize_farm',
     },
   ];

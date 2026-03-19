@@ -317,7 +317,8 @@ const styles = StyleSheet.create({
 
   label: {
     fontWeight: "bold",
-    marginTop: 10
+    marginTop: 10,
+     color: "#000000",
   },
 
   input: {
@@ -325,7 +326,8 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     padding: 10,
     borderRadius: 5,
-    marginBottom: 10
+    marginBottom: 10,
+    color: "#000000",
   },
 
   pickerContainer: {
