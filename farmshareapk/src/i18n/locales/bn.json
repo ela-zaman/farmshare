@@ -58,6 +58,9 @@
   "fill_all_fields": "সব ঘর পূরণ করুন",
   "machine_added": "যন্ত্র সফলভাবে যোগ হয়েছে",
   "role":"রোল",
-  "booking_requests": "বুকিং রিকুয়েস্ট"
+  "booking_requests": "বুকিং রিকুয়েস্ট",
+  "provider" : "সার্ভিস প্রোভাইডার",
+  "search": "কৃষি যন্ত্র খুঁজে বের করুন",
+  "farm_machine": "কৃষি যন্ত্র"
 
 }

@@ -60,7 +60,10 @@
   "machine_added": "Machine added successfully",
    "no_machines": "No machines added yet",
    "role":"Role",
-   "booking_requests": "Booking Request"
+   "booking_requests": "Booking Request",
+   "provider" : "Provider",
+   "search": "Search Farm Machinery",
+   "farm_machine": "Farm Machinery"
   
  
 

@@ -22,6 +22,7 @@ import ProviderMyContact  from "../screens/provider/ProviderMyContact";
 import ProviderMachineDetails from "../screens/provider/ProviderMachineDetails";
 import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
 import ProviderBookingRequests from "../screens/provider/ProviderBookingRequests";
+import SearchResult from "../screens/farmer/SearchResult";
 
 const Stack = createNativeStackNavigator();
 
@@ -67,7 +68,8 @@ export default function AppNavigator() {
       <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
       <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
      <Stack.Screen name="ProviderBookingRequests" component={ProviderBookingRequests} />
-  
+  <Stack.Screen name="SearchScreen" component={SearchScreen} />
+   <Stack.Screen name="SearchResult" component={SearchResult} />
     </Stack.Navigator>
   );
 }

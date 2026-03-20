@@ -64,7 +64,7 @@ export default function ProviderDashboard({ navigation }) {
           <Text style={styles.label}>{t("notification")}</Text>
         </TouchableOpacity>
       </View>
-
+      
       {/* ROW 2 */}
       <View style={styles.row}>
         <TouchableOpacity

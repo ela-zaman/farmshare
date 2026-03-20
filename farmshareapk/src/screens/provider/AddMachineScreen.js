@@ -16,48 +16,24 @@ import { Picker } from "@react-native-picker/picker";
 import { useTranslation } from "react-i18next";
 
 import { db, auth } from "../../firebase/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  doc,
-  getDoc
-} from "firebase/firestore";
-
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { bdLocations } from "../../data/bdLocation";
 
 export default function AddMachineScreen() {
-
-  /* -------------------- */
-  /* Translation Setup    */
-  /* -------------------- */
   const { t, i18n } = useTranslation();
 
-  /* -------------------- */
-  /* State Variables      */
-  /* -------------------- */
-  const [name, setName] = useState("");
   const [machineType, setMachineType] = useState("");
   const [tillageType, setTillageType] = useState("");
   const [tillageCharge, setTillageCharge] = useState("");
-
   const [district, setDistrict] = useState("");
   const [upazilla, setUpazilla] = useState("");
   const [village, setVillage] = useState("");
 
   const scrollViewRef = useRef(null);
 
-  /* -------------------- */
-  /* Location Data        */
-  /* -------------------- */
-
   const districts = Object.keys(bdLocations);
   const selectedDistrict = bdLocations[district];
   const upazillas = selectedDistrict ? selectedDistrict.upazilas : [];
-
-  /* -------------------- */
-  /* Helper Functions     */
-  /* -------------------- */
 
   const getDistrictLabel = (districtKey) => {
     if (!districtKey) return "";
@@ -73,22 +49,16 @@ export default function AddMachineScreen() {
       : upazilaObj.en;
   };
 
-  /* -------------------- */
-  /* Add Machine Function */
-  /* -------------------- */
-
   const handleAddMachine = async () => {
     try {
       const user = auth.currentUser;
-
       if (!user) {
         Alert.alert(t("error"), t("user_not_logged_in"));
         return;
       }
 
-      // Validation
+      // Validation (no machine name)
       if (
-        !name ||
         !machineType ||
         !tillageType ||
         !tillageCharge ||
@@ -100,47 +70,37 @@ export default function AddMachineScreen() {
         return;
       }
 
-      /* ---------------------------------- */
-      /* 🔥 GET USER PHONE                 */
-      /* ---------------------------------- */
-
       let phone = "";
+      let providerName = "";
 
-      // Case 1: Firebase Phone Auth
-      if (user.phone) {
-        phone = user.phone;
-      } else {
-        // Case 2: Firestore users collection
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
+      // Get user data
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists()) {
-          phone = userSnap.data().phone || "";
-        }
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        phone = userData.phone || "";
+        providerName = userData.name || "Unknown";
       }
 
-      /* ---------------------------------- */
-      /* SAVE TO FIREBASE                   */
-      /* ---------------------------------- */
-
+      // Save machine
       await addDoc(collection(db, "machines"), {
-        name: name.trim(),
         machineType,
         tillageType,
         tillageCharge,
-        phone: phone, // ✅ AUTO STORED
         district,
         upazilla,
         village: village.trim(),
-        providerId: user.uid,
+        phone,
+        userId: user.uid,
+        providerName,
         providerEmail: user.email,
         createdAt: serverTimestamp()
       });
 
       Alert.alert(t("success"), t("machine_added"));
 
-      /* Reset form */
-      setName("");
+      // Reset form
       setMachineType("");
       setTillageType("");
       setTillageCharge("");
@@ -154,10 +114,6 @@ export default function AddMachineScreen() {
     }
   };
 
-  /* -------------------- */
-  /* UI                  */
-  /* -------------------- */
-
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -168,7 +124,6 @@ export default function AddMachineScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-
         {/* Header */}
         <View style={styles.headerContainer}>
           <Text style={styles.header}>{t("add_machine_title")}</Text>
@@ -178,27 +133,18 @@ export default function AddMachineScreen() {
           />
         </View>
 
-        {/* Machine Name */}
-        <Text style={styles.label}>{t("machine_name")}</Text>
-        <TextInput
-          placeholder={t("enter_machine_name")}
-          value={name}
-          onChangeText={setName}
-          style={styles.input}
-        />
-
         {/* Machine Type */}
         <Text style={styles.label}>{t("machine_type")}</Text>
         <View style={styles.pickerContainer}>
           <Picker selectedValue={machineType} onValueChange={setMachineType}>
             <Picker.Item label={t("select_machine_type")} value="" />
-            <Picker.Item label={t("tractor")} value="Tractor" />
-            <Picker.Item label={t("powertiller")} value="Powertiller" />
-            <Picker.Item label={t("reaper")} value="Reaper" />
-            <Picker.Item label={t("bed_planter")} value="Bed Planter" />
-            <Picker.Item label={t("combine_harvester")} value="Combine Harvester" />
-            <Picker.Item label={t("thresher")} value="Thresher" />
-            <Picker.Item label={t("sprayer")} value="Sprayer" />
+            <Picker.Item label={t("tractor")} value="tractor" />
+            <Picker.Item label={t("powertiller")} value="powertiller" />
+            <Picker.Item label={t("reaper")} value="reaper" />
+            <Picker.Item label={t("bed_planter")} value="bed_planter" />
+            <Picker.Item label={t("combine_harvester")} value="combine_harvester" />
+            <Picker.Item label={t("thresher")} value="thresher" />
+            <Picker.Item label={t("sprayer")} value="sprayer" />
           </Picker>
         </View>
 
@@ -287,66 +233,16 @@ export default function AddMachineScreen() {
 }
 
 /* -------------------- */
-/* Styles               */
+/* STYLES               */
 /* -------------------- */
-
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    flexGrow: 1
-  },
-
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20
-  },
-
-  header: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginRight: 10
-  },
-
-  headerImage: {
-    width: 24,
-    height: 24,
-    resizeMode: "contain"
-  },
-
-  label: {
-    fontWeight: "bold",
-    marginTop: 10,
-     color: "#000000",
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    color: "#000000",
-  },
-
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    marginBottom: 10
-  },
-
-  addButton: {
-    backgroundColor: "#4CAF50",
-    padding: 15,
-    borderRadius: 30,
-    alignItems: "center",
-    marginTop: 20
-  },
-
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "bold"
-  }
+  container: { padding: 20, flexGrow: 1 },
+  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 20 },
+  header: { fontSize: 22, fontWeight: "bold", marginRight: 10 },
+  headerImage: { width: 24, height: 24 },
+  label: { fontWeight: "bold", marginTop: 10, color: "#000" },
+  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, borderRadius: 5, marginBottom: 10, color: "#000" },
+  pickerContainer: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, marginBottom: 10 },
+  addButton: { backgroundColor: "#4CAF50", padding: 15, borderRadius: 30, alignItems: "center", marginTop: 20 },
+  addButtonText: { color: "#fff", fontWeight: "bold" }
 });
