@@ -64,12 +64,12 @@ export default function ProviderDashboard({ navigation }) {
           <Text style={styles.label}>{t("notification")}</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* ROW 2 */}
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("ProviderBookings")}
+          onPress={() => navigation.navigate("ProviderBookingScreen")}
         >
           <Image
             source={require("../../../assets/images/Dashboard/bookings.png")}

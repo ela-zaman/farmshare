@@ -24,7 +24,7 @@ import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
 import ProviderBookingRequests from "../screens/provider/ProviderBookingRequests";
 import SearchResult from "../screens/farmer/SearchResult";
 import BookingDetails from "../screens/farmer/BookingDetails";
-
+import FarmerNotifications from "../screens/farmer/FarmerNotifications";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -64,7 +64,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ProviderCurrentStatus" component={ProviderCurrentStatus} />
       <Stack.Screen name="AddMachinery" component={AddMachineScreen} />
       <Stack.Screen name="ProviderNotification" component={ProviderNotificationScreen} />
-      <Stack.Screen name="ProviderBookings" component={ProviderBookingScreen} />
+      <Stack.Screen name="ProviderBookingScreen" component={ProviderBookingScreen} />
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
       <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
       <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
@@ -72,6 +72,7 @@ export default function AppNavigator() {
   <Stack.Screen name="SearchScreen" component={SearchScreen} />
    <Stack.Screen name="SearchResult" component={SearchResult} />
    <Stack.Screen name="BookingDetails" component={BookingDetails} />
+   <Stack.Screen name="FarmerNotifications" component={FarmerNotifications} />
     </Stack.Navigator>
   );
 }

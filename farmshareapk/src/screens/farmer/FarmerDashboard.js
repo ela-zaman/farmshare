@@ -63,7 +63,7 @@ export default function FarmerDashboard({ navigation }) {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("NewOrder")}
+          onPress={() => navigation.navigate("FarmerNotifications")}
         >
           <Image
             source={require("../../../assets/images/Dashboard/contact.png")}
