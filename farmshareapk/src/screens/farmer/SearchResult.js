@@ -5,21 +5,23 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Image
+  Image,
+  TouchableOpacity
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { bdLocations } from "../../data/bdLocation";
+import { useNavigation } from "@react-navigation/native"; // <-- import navigation hook
 
 export default function SearchResult({ route }) {
   const { t, i18n } = useTranslation();
-  const { machineType, district, upazila } = route.params || {}; // Make sure this matches route params
+  const { machineType, district, upazilla } = route.params || {};
+  const navigation = useNavigation(); // <-- initialize navigation
 
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Normalize text for comparison
   const normalize = (text) => text?.toString().trim().toLowerCase();
 
   useEffect(() => {
@@ -31,14 +33,12 @@ export default function SearchResult({ route }) {
       const snapshot = await getDocs(collection(db, "machines"));
       const allData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-      // Filter by machineType + district + upazila
-      const filtered = allData.filter((item) => {
-        return (
-          normalize(item.machineType) === normalize(machineType) &&
-          normalize(item.district) === normalize(district) &&
-          normalize(item.upazilla) === normalize(upazila) // make sure field name is 'upazilla' in Firebase
-        );
-      });
+      const filtered = allData.filter(
+        (item) =>
+          (!machineType || normalize(item.machineType) === normalize(machineType)) &&
+          (!district || normalize(item.district) === normalize(district)) &&
+          (!upazilla || normalize(item.upazilla) === normalize(upazilla))
+      );
 
       setMachines(filtered);
     } catch (error) {
@@ -48,9 +48,6 @@ export default function SearchResult({ route }) {
     }
   };
 
-  // ------------------------------
-  // Machine image
-  // ------------------------------
   const getMachineImage = (type) => {
     if (!type) return require("../../../assets/images/add.png");
     const key = type.toLowerCase().trim().replace(/\s/g, "_");
@@ -66,9 +63,6 @@ export default function SearchResult({ route }) {
     return IMAGE_MAP[key] || require("../../../assets/images/add.png");
   };
 
-  // ------------------------------
-  // Labels
-  // ------------------------------
   const getDistrictLabel = (districtKey) => {
     if (!districtKey) return "";
     return i18n.language === "bn"
@@ -84,11 +78,11 @@ export default function SearchResult({ route }) {
     return i18n.language === "bn" ? upazilaObj.bn : upazilaObj.en;
   };
 
-  const getVillageLabel = (village) => village || "";
+  const getVillageLabel = (village) => {
+    if (!village) return "";
+    return village;
+  };
 
-  // ------------------------------
-  // Machine type & tillage type translation
-  // ------------------------------
   const MACHINE_TYPE_MAP = {
     tractor: "tractor",
     powertiller: "powertiller",
@@ -117,14 +111,21 @@ export default function SearchResult({ route }) {
   };
 
   // ------------------------------
-  // Render each machine horizontally
+  // Render item horizontally
   // ------------------------------
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.7}
+      onPress={() => navigation.navigate("BookingDetails", { machine: item })} // <-- navigate with data
+    >
+      {/* Left: Image */}
       <Image
         source={getMachineImage(item.machineType)}
         style={styles.image}
       />
+
+      {/* Right: Texts stacked vertically */}
       <View style={styles.info}>
         <Text style={styles.title}>{getMachineTypeLabel(item.machineType)}</Text>
         <Text style={styles.text}>{t("provider")}: {item.providerName || "Unknown"}</Text>
@@ -135,7 +136,7 @@ export default function SearchResult({ route }) {
         <Text style={styles.text}>{t("charge")}: {item.tillageCharge}</Text>
         <Text style={styles.text}>{t("type")}: {getChargeTypeLabel(item.tillageType)}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
