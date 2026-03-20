@@ -14,11 +14,12 @@ import { bdLocations } from "../../data/bdLocation";
 
 export default function SearchResult({ route }) {
   const { t, i18n } = useTranslation();
-  const { machineType, district, upazilla } = route.params || {};
+  const { machineType, district, upazila } = route.params || {}; // Make sure this matches route params
 
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Normalize text for comparison
   const normalize = (text) => text?.toString().trim().toLowerCase();
 
   useEffect(() => {
@@ -30,12 +31,14 @@ export default function SearchResult({ route }) {
       const snapshot = await getDocs(collection(db, "machines"));
       const allData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-      const filtered = allData.filter(
-        (item) =>
-          (!machineType || normalize(item.machineType) === normalize(machineType)) &&
-          (!district || normalize(item.district) === normalize(district)) &&
-          (!upazilla || normalize(item.upazilla) === normalize(upazilla))
-      );
+      // Filter by machineType + district + upazila
+      const filtered = allData.filter((item) => {
+        return (
+          normalize(item.machineType) === normalize(machineType) &&
+          normalize(item.district) === normalize(district) &&
+          normalize(item.upazilla) === normalize(upazila) // make sure field name is 'upazilla' in Firebase
+        );
+      });
 
       setMachines(filtered);
     } catch (error) {
@@ -46,7 +49,7 @@ export default function SearchResult({ route }) {
   };
 
   // ------------------------------
-  // Image based on machine type
+  // Machine image
   // ------------------------------
   const getMachineImage = (type) => {
     if (!type) return require("../../../assets/images/add.png");
@@ -81,12 +84,11 @@ export default function SearchResult({ route }) {
     return i18n.language === "bn" ? upazilaObj.bn : upazilaObj.en;
   };
 
-  // Village (from Firebase, translated if needed)
-  const getVillageLabel = (village) => {
-    if (!village) return "";
-    return village; // You can extend here if you store translations for villages
-  };
+  const getVillageLabel = (village) => village || "";
 
+  // ------------------------------
+  // Machine type & tillage type translation
+  // ------------------------------
   const MACHINE_TYPE_MAP = {
     tractor: "tractor",
     powertiller: "powertiller",
@@ -97,7 +99,6 @@ export default function SearchResult({ route }) {
     sprayer: "sprayer"
   };
 
-  // Exact mapping from Firebase to translation keys
   const CHARGE_TYPE_MAP = {
     "Per Decimal": "per_decimal",
     "Per Bigha": "per_bigha"
@@ -116,17 +117,14 @@ export default function SearchResult({ route }) {
   };
 
   // ------------------------------
-  // Render item horizontally
+  // Render each machine horizontally
   // ------------------------------
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      {/* Left: Image */}
       <Image
         source={getMachineImage(item.machineType)}
         style={styles.image}
       />
-
-      {/* Right: Texts stacked vertically */}
       <View style={styles.info}>
         <Text style={styles.title}>{getMachineTypeLabel(item.machineType)}</Text>
         <Text style={styles.text}>{t("provider")}: {item.providerName || "Unknown"}</Text>
