@@ -54,11 +54,11 @@ export default function FarmerDashboard({ navigation }) {
           onPress={() => navigation.navigate("SearchScreen")}
         >
           <Image
-            source={require("../../../assets/images/Dashboard/contact.png")}
+            source={require("../../../assets/images/Dashboard/search.png")}
             style={styles.icon}
             resizeMode="contain"
           />
-          <Text style={styles.label}>{t("my_orders")}</Text>
+          <Text style={styles.label}>{t("search")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
