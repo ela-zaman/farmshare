@@ -60,8 +60,8 @@ export default function ProviderBookingRequests() {
 
             if (!userSnap.empty) {
               const userData = userSnap.docs[0].data();
-              farmerName = userData.name || "Unknown";
-              farmerPhone = userData.phone || "N/A";
+              farmerName = userData.userName || "Unknown";
+              farmerPhone = userData.userPhone || "N/A";
             }
           } catch (err) {
             console.log("Error fetching user:", err);
@@ -141,8 +141,8 @@ export default function ProviderBookingRequests() {
       <View style={styles.info}>
         <Text style={styles.title}>{item.machineType}</Text>
 
-        <Text>{t("farmer")}: {item.farmerName}</Text>
-        <Text>{t("phone")}: {item.farmerPhone}</Text>
+        <Text>{t("farmer_name")}: {item.userName}</Text>
+        <Text>{t("phone")}: {item.userPhone}</Text>
 
         <Text>{t("dates")}:</Text>
         <Text style={{ fontSize: 12 }}>

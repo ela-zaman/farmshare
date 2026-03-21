@@ -76,7 +76,8 @@ export default function ProviderBookingScreen() {
 
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{item.machineType}</Text>
-        <Text>{t("farmer")}: {item.userId}</Text>
+        <Text>{t("farmer_name")}: {item.userName}</Text>
+        <Text>{t("phone")}: {item.userPhone}</Text>
         <Text>{t("dates")}: {item.dates?.join(", ")}</Text>
         <Text style={{ color: "green" }}>
           {t("booking_accepted")}

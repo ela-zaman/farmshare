@@ -150,7 +150,7 @@ export default function BookingDetails({ route, navigation }) {
       <Text>{t("provider")}: {machine.providerName || "Unknown"}</Text>
       <Text>{t("phone")}: {machine.phone || "N/A"}</Text>
       <Text>{t("district")}: {machine.district || "N/A"}</Text>
-      <Text>{t("upazila")}: {machine.upazila || "N/A"}</Text>
+      <Text>{t("upazila")}: {machine.upazilla || "N/A"}</Text>
       <Text>{t("village")}: {machine.village || "N/A"}</Text>
       <Text>{t("charge")}: {machine.tillageCharge || "N/A"}</Text>
       <Text>{t("type")}: {machine.tillageType || "N/A"}</Text>

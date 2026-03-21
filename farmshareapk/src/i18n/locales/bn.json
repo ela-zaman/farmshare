@@ -47,7 +47,7 @@
   "enter_charge": "চার্জ লিখুন",
   "district": "জেলা",
   "select_district": "জেলা নির্বাচন করুন",
-  "upazila": "উপজেলা",
+  "upazilla": "উপজেলা",
   "select_upazila": "উপজেলা নির্বাচন করুন",
   "village": "গ্রাম",
   "enter_village": "গ্রামের নাম লিখুন",
@@ -61,6 +61,7 @@
   "booking_requests": "বুকিং রিকুয়েস্ট",
   "provider" : "সার্ভিস প্রোভাইডার",
   "search": "কৃষি যন্ত্র খুঁজে বের করুন",
-  "farm_machine": "কৃষি যন্ত্র"
+  "farm_machine": "কৃষি যন্ত্র",
+  "farmer_name": "কৃষকের নাম"
 
 }

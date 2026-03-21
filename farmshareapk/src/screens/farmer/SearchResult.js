@@ -9,15 +9,17 @@ import {
   TouchableOpacity
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { bdLocations } from "../../data/bdLocation";
-import { useNavigation } from "@react-navigation/native"; // <-- import navigation hook
+import { useNavigation } from "@react-navigation/native";
 
 export default function SearchResult({ route }) {
   const { t, i18n } = useTranslation();
+
+  // ✅ IMPORTANT: ensure correct param naming
   const { machineType, district, upazilla } = route.params || {};
-  const navigation = useNavigation(); // <-- initialize navigation
+  const navigation = useNavigation();
 
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,17 +32,40 @@ export default function SearchResult({ route }) {
 
   const fetchMachines = async () => {
     try {
-      const snapshot = await getDocs(collection(db, "machines"));
-      const allData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      console.log("PARAMS:", { machineType, district, upazilla });
 
-      const filtered = allData.filter(
-        (item) =>
-          (!machineType || normalize(item.machineType) === normalize(machineType)) &&
-          (!district || normalize(item.district) === normalize(district)) &&
-          (!upazilla || normalize(item.upazilla) === normalize(upazilla))
-      );
+      let q = collection(db, "machines");
 
-      setMachines(filtered);
+      // ✅ Build Firestore query dynamically
+      const conditions = [];
+
+      if (machineType) {
+        conditions.push(where("machineType", "==", machineType));
+      }
+
+      if (district) {
+        conditions.push(where("district", "==", district));
+      }
+
+      // ⚠️ FIX: use correct field name (Firestore usually uses "upazila")
+      if (upazilla) {
+        conditions.push(where("upazilla", "==", upazilla));
+      }
+
+      if (conditions.length > 0) {
+        q = query(q, ...conditions);
+      }
+
+      const snapshot = await getDocs(q);
+
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log("FILTERED DATA:", data);
+
+      setMachines(data);
     } catch (error) {
       console.log("ERROR FETCHING MACHINES:", error);
     } finally {
@@ -48,9 +73,15 @@ export default function SearchResult({ route }) {
     }
   };
 
+  // ------------------------------
+  // Helpers
+  // ------------------------------
+
   const getMachineImage = (type) => {
     if (!type) return require("../../../assets/images/add.png");
+
     const key = type.toLowerCase().trim().replace(/\s/g, "_");
+
     const IMAGE_MAP = {
       tractor: require("../../../assets/images/Machines/tractor.png"),
       powertiller: require("../../../assets/images/Machines/powertiller.png"),
@@ -60,6 +91,7 @@ export default function SearchResult({ route }) {
       thresher: require("../../../assets/images/Machines/thresher.png"),
       sprayer: require("../../../assets/images/Machines/sprayer.jpg")
     };
+
     return IMAGE_MAP[key] || require("../../../assets/images/add.png");
   };
 
@@ -70,17 +102,21 @@ export default function SearchResult({ route }) {
       : districtKey;
   };
 
-  const getUpazillaLabel = (districtKey, upazillaEn) => {
-    if (!districtKey || !upazillaEn) return "";
+  const getUpazillaLabel = (districtKey, upazilaEn) => {
+    if (!districtKey || !upazilaEn) return "";
+
     const districtData = bdLocations[districtKey];
-    const upazilaObj = districtData?.upazilas.find((u) => u.en === upazillaEn);
-    if (!upazilaObj) return upazillaEn;
+    const upazilaObj = districtData?.upazilas.find(
+      (u) => normalize(u.en) === normalize(upazilaEn)
+    );
+
+    if (!upazilaObj) return upazilaEn;
+
     return i18n.language === "bn" ? upazilaObj.bn : upazilaObj.en;
   };
 
   const getVillageLabel = (village) => {
-    if (!village) return "";
-    return village;
+    return village || "";
   };
 
   const MACHINE_TYPE_MAP = {
@@ -106,35 +142,57 @@ export default function SearchResult({ route }) {
 
   const getChargeTypeLabel = (value) => {
     if (!value) return "";
-    const key = CHARGE_TYPE_MAP[value] || CHARGE_TYPE_MAP[value.trim()];
+    const key = CHARGE_TYPE_MAP[value] || CHARGE_TYPE_MAP[value?.trim()];
     return key ? t(key) : value;
   };
 
   // ------------------------------
-  // Render item horizontally
+  // UI
   // ------------------------------
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.7}
-      onPress={() => navigation.navigate("BookingDetails", { machine: item })} // <-- navigate with data
+      onPress={() => navigation.navigate("BookingDetails", { machine: item })}
     >
-      {/* Left: Image */}
       <Image
         source={getMachineImage(item.machineType)}
         style={styles.image}
       />
 
-      {/* Right: Texts stacked vertically */}
       <View style={styles.info}>
-        <Text style={styles.title}>{getMachineTypeLabel(item.machineType)}</Text>
-        <Text style={styles.text}>{t("provider")}: {item.providerName || "Unknown"}</Text>
-        <Text style={styles.text}>{t("phone")}: {item.phone || "N/A"}</Text>
-        <Text style={styles.text}>{t("district")}: {getDistrictLabel(item.district)}</Text>
-        <Text style={styles.text}>{t("upazila")}: {getUpazillaLabel(item.district, item.upazilla)}</Text>
-        <Text style={styles.text}>{t("village")}: {getVillageLabel(item.village)}</Text>
-        <Text style={styles.text}>{t("charge")}: {item.tillageCharge}</Text>
-        <Text style={styles.text}>{t("type")}: {getChargeTypeLabel(item.tillageType)}</Text>
+        <Text style={styles.title}>
+          {getMachineTypeLabel(item.machineType)}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("provider")}: {item.providerName || "Unknown"}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("phone")}: {item.phone || "N/A"}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("district")}: {getDistrictLabel(item.district)}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("upazilla")}: {getUpazillaLabel(item.district, item.upazilla)}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("village")}: {getVillageLabel(item.village)}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("charge")}: {item.tillageCharge}
+        </Text>
+
+        <Text style={styles.text}>
+          {t("type")}: {getChargeTypeLabel(item.tillageType)}
+        </Text>
       </View>
     </TouchableOpacity>
   );

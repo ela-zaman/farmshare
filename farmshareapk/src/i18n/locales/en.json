@@ -48,7 +48,7 @@
   "enter_charge": "Enter Charge",
   "district": "District",
   "select_district": "Select District",
-  "upazila": "Upazila",
+  "upazilla": "Upazila",
   "select_upazila": "Select Upazila",
   "village": "Village",
   "enter_village": "Enter Village",
@@ -63,7 +63,8 @@
    "booking_requests": "Booking Request",
    "provider" : "Provider",
    "search": "Search Farm Machinery",
-   "farm_machine": "Farm Machinery"
+   "farm_machine": "Farm Machinery",
+   "farmer_name": "Farmer Name"
   
  
 

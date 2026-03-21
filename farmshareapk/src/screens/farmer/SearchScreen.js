@@ -16,7 +16,7 @@ export default function SearchScreen({ navigation }) {
 
   const [machineType, setMachineType] = useState(null);
   const [district, setDistrict] = useState(null);
-  const [upazila, setUpazila] = useState(null);
+  const [upazilla, setUpazila] = useState(null);
   const [upazilaList, setUpazilaList] = useState([]);
 
   // MACHINE TYPES
@@ -65,7 +65,7 @@ export default function SearchScreen({ navigation }) {
 
   // SEARCH BUTTON
   const handleSearch = () => {
-    if (!machineType || !district || !upazila) {
+    if (!machineType || !district || !upazilla) {
       Alert.alert(t("error"), t("select_all_fields"));
       return;
     }
@@ -73,7 +73,7 @@ export default function SearchScreen({ navigation }) {
     navigation.navigate("SearchResult", {
       machineType,
       district,
-      upazila
+      upazilla
     });
   };
 
@@ -110,7 +110,7 @@ export default function SearchScreen({ navigation }) {
         labelField="label"
         valueField="value"
         placeholder={t("select_upazila")}
-        value={upazila}
+        value={upazilla}
         onChange={(item) => setUpazila(item.value)}
       />
 
