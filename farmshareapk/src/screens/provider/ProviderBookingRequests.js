@@ -13,7 +13,7 @@ import {
   collection,
   query,
   where,
-  getDocs,
+  onSnapshot,
   updateDoc,
   doc
 } from "firebase/firestore";
@@ -23,64 +23,31 @@ import { getAuth } from "firebase/auth";
 export default function ProviderBookingRequests() {
   const { t } = useTranslation();
   const [requests, setRequests] = useState([]);
+
   const auth = getAuth();
   const provider = auth.currentUser;
 
   useEffect(() => {
-    if (provider) fetchRequests();
-  }, [provider]);
+    if (!provider) return;
 
-  // ---------------------------
-  // Fetch Booking Requests + Farmer Info
-  // ---------------------------
-  const fetchRequests = async () => {
-    try {
-      const q = query(
-        collection(db, "bookings"),
-        where("providerId", "==", provider.uid),
-        where("status", "==", "pending")
-      );
+    // 🔥 REALTIME LISTENER
+    const q = query(
+      collection(db, "bookings"),
+      where("providerId", "==", provider.uid),
+      where("status", "==", "pending")
+    );
 
-      const snapshot = await getDocs(q);
-
-      const result = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const booking = docSnap.data();
-
-          // 🔥 Get farmer info from users collection
-          let farmerName = "Unknown";
-          let farmerPhone = "N/A";
-
-          try {
-            const userQuery = query(
-              collection(db, "users"),
-              where("uid", "==", booking.userId)
-            );
-            const userSnap = await getDocs(userQuery);
-
-            if (!userSnap.empty) {
-              const userData = userSnap.docs[0].data();
-              farmerName = userData.userName || "Unknown";
-              farmerPhone = userData.userPhone || "N/A";
-            }
-          } catch (err) {
-            console.log("Error fetching user:", err);
-          }
-
-          return {
-            id: docSnap.id,
-            ...booking,
-            farmerName,
-            farmerPhone
-          };
-        })
-      );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const result = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
 
       setRequests(result);
-    } catch (err) {
-      console.log("Error fetching requests:", err);
-    }
-  };
+    });
+
+    return () => unsubscribe(); // cleanup
+  }, [provider]);
 
   // ---------------------------
   // Accept / Deny Booking
@@ -88,7 +55,7 @@ export default function ProviderBookingRequests() {
   const handleDecision = async (id, decision) => {
     try {
       await updateDoc(doc(db, "bookings", id), {
-        status: decision
+        status: decision, // "accepted" or "denied"
       });
 
       Alert.alert(
@@ -98,7 +65,6 @@ export default function ProviderBookingRequests() {
           : t("booking_denied")
       );
 
-      fetchRequests();
     } catch (err) {
       console.log("Error updating booking:", err);
       Alert.alert(t("error"), t("update_failed"));
@@ -131,13 +97,13 @@ export default function ProviderBookingRequests() {
   // ---------------------------
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      {/* Left Image */}
+      {/* Image */}
       <Image
         source={getMachineImage(item.machineType)}
         style={styles.image}
       />
 
-      {/* Right Info */}
+      {/* Info */}
       <View style={styles.info}>
         <Text style={styles.title}>{item.machineType}</Text>
 

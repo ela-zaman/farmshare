@@ -92,7 +92,7 @@ export default function AddMachineScreen() {
         upazilla,
         village: village.trim(),
         phone,
-        userId: user.uid,
+        providerId: user.uid,
         providerName,
         providerEmail: user.email,
         createdAt: serverTimestamp()

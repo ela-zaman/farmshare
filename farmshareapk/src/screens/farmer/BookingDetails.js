@@ -1,14 +1,31 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Button, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  Image,
+  TextInput,
+  ScrollView,
+  TouchableOpacity
+} from "react-native";
 import { useTranslation } from "react-i18next";
-import { Calendar } from "react-native-calendars";
-import { collection, addDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { Calendar, LocaleConfig } from "react-native-calendars";
+import {
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where
+} from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
 
 export default function BookingDetails({ route, navigation }) {
-  const { t } = useTranslation();
-  const { machine } = route.params;
+  const { t, i18n } = useTranslation();
+  const { machine } = route.params || {};
 
   const auth = getAuth();
   const user = auth.currentUser;
@@ -16,6 +33,22 @@ export default function BookingDetails({ route, navigation }) {
   const [bookedDates, setBookedDates] = useState({});
   const [selectedDates, setSelectedDates] = useState({});
   const [userInfo, setUserInfo] = useState(null);
+  const [tillageNumber, setTillageNumber] = useState("");
+
+  // ----------------------------
+  // 🌐 MULTILINGUAL CALENDAR
+  // ----------------------------
+  useEffect(() => {
+    LocaleConfig.locales["bn"] = {
+      monthNames: ["জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন","জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"],
+      monthNamesShort: ["জানু","ফেব","মার্চ","এপ্রি","মে","জুন","জুল","আগ","সেপ্ট","অক্টো","নভে","ডিসে"],
+      dayNames: ["রবিবার","সোমবার","মঙ্গলবার","বুধবার","বৃহস্পতিবার","শুক্রবার","শনিবার"],
+      dayNamesShort: ["রবি","সোম","মঙ্গল","বুধ","বৃহ","শুক্র","শনি"],
+      today: "আজ"
+    };
+
+    LocaleConfig.defaultLocale = i18n.language === "bn" ? "bn" : "en";
+  }, [i18n.language]);
 
   useEffect(() => {
     fetchBookedDates();
@@ -23,73 +56,72 @@ export default function BookingDetails({ route, navigation }) {
   }, []);
 
   // ----------------------------
-  // Fetch logged-in user info
+  // USER INFO
   // ----------------------------
   const fetchUserInfo = async () => {
     if (!user) return;
 
-    try {
-      // Using document ID instead of query for reliability
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
+    const docRef = doc(db, "users", user.uid);
+    const snap = await getDoc(docRef);
 
-      if (docSnap.exists()) {
-        setUserInfo(docSnap.data());
-        console.log("USER INFO:", docSnap.data());
-      } else {
-        console.log("No user info found!");
-        Alert.alert(t("error"), t("user_info_missing"));
-      }
-    } catch (err) {
-      console.log("Error fetching user info:", err);
-      Alert.alert(t("error"), t("fetch_user_failed"));
+    if (snap.exists()) {
+      setUserInfo(snap.data());
     }
   };
 
   // ----------------------------
-  // Fetch booked dates
+  // BOOKED DATES
   // ----------------------------
   const fetchBookedDates = async () => {
-    try {
-      const q = query(collection(db, "bookings"), where("machineId", "==", machine.id));
-      const snapshot = await getDocs(q);
+    const q = query(
+      collection(db, "bookings"),
+      where("machineId", "==", machine.id),
+      where("status", "==", "accepted")
+    );
 
-      const booked = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        data.dates?.forEach((date) => {
-          booked[date] = {
-            disabled: true,
-            marked: true,
-            dotColor: "red",
-          };
-        });
+    const snapshot = await getDocs(q);
+
+    let booked = {};
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+
+      data.dates?.forEach((date) => {
+        booked[date] = {
+          selected: true,
+          selectedColor: "red",
+          disabled: true
+        };
       });
+    });
 
-      setBookedDates(booked);
-    } catch (err) {
-      console.log("Error fetching booked dates:", err);
-      Alert.alert(t("error"), t("fetch_booked_failed"));
-    }
+    setBookedDates(booked);
   };
 
   // ----------------------------
-  // Select date
+  // SELECT DATE
   // ----------------------------
   const handleDayPress = (day) => {
     if (bookedDates[day.dateString]) return;
 
-    setSelectedDates((prev) => ({
-      ...prev,
-      [day.dateString]: {
-        selected: true,
-        selectedColor: "green",
-      },
-    }));
+    setSelectedDates((prev) => {
+      const updated = { ...prev };
+
+      if (updated[day.dateString]) {
+        delete updated[day.dateString];
+      } else {
+        updated[day.dateString] = {
+          selected: true,
+          selectedColor: "#007bff" // 🔵 BLUE
+        };
+      }
+
+      return updated;
+    });
   };
 
   // ----------------------------
-  // Booking
+  // BOOKING
   // ----------------------------
   const handleBooking = async () => {
     if (!user) {
@@ -97,82 +129,161 @@ export default function BookingDetails({ route, navigation }) {
       return;
     }
 
-    if (!userInfo || !userInfo.name || !userInfo.phone) {
-      Alert.alert(t("error"), t("user_info_missing"));
+    if (!tillageNumber) {
+      Alert.alert(t("error"), "Enter tillage number");
       return;
     }
 
     const dates = Object.keys(selectedDates);
+
     if (dates.length === 0) {
       Alert.alert(t("error"), t("select_dates"));
       return;
     }
 
-    try {
-      console.log("Booking Data:", {
-        machineType: machine.machineType,
-        userName: userInfo.name,
-        userPhone: userInfo.phone,
-        dates,
-      });
-
-      await addDoc(collection(db, "bookings"), {
-        machineId: machine.id,
-        machineType: machine.machineType || "unknown",
-        providerId: machine.providerId || "",
-
-        userId: user.uid,
-        userName: userInfo.name || "Unknown",
-        userPhone: userInfo.phone || "N/A",
-
-        dates,
-        status: "pending",
-        createdAt: new Date(),
-      });
-
-      Alert.alert(t("success"), t("booking_sent"));
-      setSelectedDates({});
-      fetchBookedDates();
-      navigation.goBack();
-    } catch (err) {
-      console.log("Error booking:", err);
-      Alert.alert(t("error"), t("booking_failed"));
+    if (!machine?.providerId) {
+      Alert.alert("Error", "Provider ID missing");
+      return;
     }
+
+    await addDoc(collection(db, "bookings"), {
+      machineId: machine.id,
+      machineType: machine.machineType,
+      providerId: machine.providerId,
+
+      userId: user.uid,
+      userName: userInfo?.name || "Unknown",
+      userPhone: userInfo?.phone || "N/A",
+
+      tillageNumber,
+      dates,
+      status: "pending",
+      createdAt: new Date(),
+    });
+
+    Alert.alert(t("success"), t("booking_sent"));
+    navigation.goBack();
   };
+
+  const today = new Date().toISOString().split("T")[0];
 
   // ----------------------------
   // UI
   // ----------------------------
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{machine.machineType || "Unknown"}</Text>
+    <ScrollView style={styles.container}>
+      
+      {/* 🔥 TOP CARD */}
+      <View style={styles.card}>
+        <Image
+          source={require("../../../assets/images/Machines/tractor.png")}
+          style={styles.image}
+        />
 
-      <Text>{t("provider")}: {machine.providerName || "Unknown"}</Text>
-      <Text>{t("phone")}: {machine.phone || "N/A"}</Text>
-      <Text>{t("district")}: {machine.district || "N/A"}</Text>
-      <Text>{t("upazila")}: {machine.upazilla || "N/A"}</Text>
-      <Text>{t("village")}: {machine.village || "N/A"}</Text>
-      <Text>{t("charge")}: {machine.tillageCharge || "N/A"}</Text>
-      <Text>{t("type")}: {machine.tillageType || "N/A"}</Text>
+        <View style={styles.info}>
+          <Text style={styles.title}>{machine?.machineType}</Text>
 
-      <Calendar
-        markingType="period"
-        markedDates={{ ...bookedDates, ...selectedDates }}
-        onDayPress={handleDayPress}
+          <Text>{t("provider")}: {machine?.providerName}</Text>
+          <Text>{t("phone")}: {machine?.phone}</Text>
+          <Text>{t("district")}: {machine?.district}</Text>
+          <Text>{t("upazila")}: {machine?.upazilla}</Text>
+          <Text>{t("village")}: {machine?.village}</Text>
+          <Text>{t("charge")}: {machine?.tillageCharge}</Text>
+          <Text>{t("type")}: {machine?.tillageType}</Text>
+        </View>
+      </View>
+
+      {/* 🔢 INPUT */}
+      <Text style={styles.label}>{t("tillage_number")}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder={t("enter_tillage")}
+        value={tillageNumber}
+        onChangeText={setTillageNumber}
+        keyboardType="numeric"
       />
 
-      <View style={{ marginTop: 15 }}>
-        <Button title={t("book_now")} onPress={handleBooking} />
-      </View>
-    </View>
+      {/* 📅 CALENDAR */}
+      <Calendar
+        minDate={today}
+        markedDates={{ ...bookedDates, ...selectedDates }}
+        onDayPress={handleDayPress}
+        theme={{
+          todayTextColor: "green",
+          arrowColor: "#007bff",
+        }}
+      />
+
+      {/* 🚀 BUTTON */}
+      <TouchableOpacity style={styles.button} onPress={handleBooking}>
+        <Text style={styles.buttonText}>{t("book_now")}</Text>
+      </TouchableOpacity>
+
+    </ScrollView>
   );
 }
 
+// ----------------------------
+// 🎨 STYLES
+// ----------------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15 },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 10,
+  container: {
+    flex: 1,
+    padding: 15,
+    backgroundColor: "#f5f7fa"
   },
+
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 15,
+    marginBottom: 15,
+    elevation: 4
+  },
+
+  image: {
+    width: 100,
+    height: 100,
+    marginRight: 10
+  },
+
+  info: {
+    flex: 1
+  },
+
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 5
+  },
+
+  label: {
+    fontSize: 14,
+    marginBottom: 5,
+    marginTop: 10
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+    backgroundColor: "#fff"
+  },
+
+  button: {
+    backgroundColor: "#007bff",
+    padding: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 20
+  },
+
+  buttonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16
+  }
 });
