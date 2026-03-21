@@ -64,7 +64,9 @@
    "provider" : "Provider",
    "search": "Search Farm Machinery",
    "farm_machine": "Farm Machinery",
-   "farmer_name": "Farmer Name"
+   "farmer_name": "Farmer Name",
+   "tillage_number": "Tillage Number",
+   "book_now": "Book Now"
   
  
 

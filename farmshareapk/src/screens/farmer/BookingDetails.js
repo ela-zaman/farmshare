@@ -26,9 +26,7 @@ import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
 import { bdLocations } from "../../data/bdLocation";
 
-// ---------------------------------------------------------
-// 1. Register Locales OUTSIDE the Component
-// ---------------------------------------------------------
+// ------------------ Locale Configuration ------------------
 LocaleConfig.locales["en"] = {
   monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
   monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
@@ -45,9 +43,7 @@ LocaleConfig.locales["bn"] = {
   today: "আজ"
 };
 
-// ---------------------------------------------------------
-// Local Images
-// ---------------------------------------------------------
+// ------------------ Local Machine Images ------------------
 import tractorImg from "../../../assets/images/Machines/tractor.png";
 import powertillerImg from "../../../assets/images/Machines/powertiller.png";
 import reaperImg from "../../../assets/images/Machines/reaper.png";
@@ -66,7 +62,7 @@ const machineImages = {
   sprayer: sprayerImg
 };
 
-// ---------------------------------------------------------
+// ------------------ Component ------------------
 export default function BookingDetails({ route, navigation }) {
   const { t, i18n } = useTranslation();
   const { machine } = route.params || {};
@@ -128,6 +124,7 @@ export default function BookingDetails({ route, navigation }) {
     } catch (err) { console.error("Booked Dates Err:", err); }
   };
 
+  // Convert numbers to Bangla
   const toBanglaNumber = (num) => {
     if (num === undefined || num === null) return "";
     const bnArr = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
@@ -172,7 +169,32 @@ export default function BookingDetails({ route, navigation }) {
       navigation.goBack();
     } catch (err) { Alert.alert(t("error"), t("booking_failed")); }
   };
+  const MACHINE_TYPE_MAP = {
+    tractor: "tractor",
+    powertiller: "powertiller",
+    reaper: "reaper",
+    bed_planter: "bed_planter",
+    combine_harvester: "combine_harvester",
+    thresher: "thresher",
+    sprayer: "sprayer"
+  };
 
+  const CHARGE_TYPE_MAP = {
+    "Per Decimal": "per_decimal",
+    "Per Bigha": "per_bigha"
+  };
+
+  const getMachineTypeLabel = (value) => {
+    if (!value) return "";
+    const key = MACHINE_TYPE_MAP[value.toLowerCase()];
+    return key ? t(key) : value;
+  };
+
+  const getChargeTypeLabel = (value) => {
+    if (!value) return "";
+    const key = CHARGE_TYPE_MAP[value] || CHARGE_TYPE_MAP[value?.trim()];
+    return key ? t(key) : value;
+  };
   const getDistrictLabel = (key) => (key && bdLocations[key]) ? (isBn ? bdLocations[key].bn : key) : (key || "");
   const getUpazilaLabel = (dKey, upKey) => {
     if (!dKey || !upKey || !bdLocations[dKey]) return upKey || "";
@@ -183,22 +205,36 @@ export default function BookingDetails({ route, navigation }) {
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#007bff" /></View>;
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Service Provider Card */}
       <View style={styles.card}>
         <View style={styles.cardContent}>
           <View style={styles.info}>
-            <Text style={styles.title}>{machine?.machineType || ""}</Text>
+            <Text style={styles.title}>{getMachineTypeLabel(machine?.machineType) || ""}</Text>
             <Text>{t("provider")}: {machine?.providerName || ""}</Text>
             <Text>{t("district")}: {getDistrictLabel(machine?.district)}</Text>
-            <Text>{t("upazila")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}</Text>
+            <Text>{t("upazilla")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}</Text>
             <Text>{t("village")}: {machine?.village || ""}</Text>
             <Text>{t("phone")}: {machine?.phone || ""}</Text>
-            <Text style={styles.price}>{t("charge")}: {machine?.tillageCharge || ""} ({machine?.tillageType || ""})</Text>
+
+            {/* Tillage Charge */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 5 }}>
+              <Text style={[styles.price, { marginRight: 5 }]}>{t("charge")}:</Text>
+              <Text style={styles.price}>
+                {isBn ? toBanglaNumber(machine?.tillageCharge) : machine?.tillageCharge}
+              </Text>
+            </View>
+
+            {/* Tillage Type */}
+            <Text >
+              {t("type")}: {getChargeTypeLabel(machine?.tillageType)}
+            </Text>
           </View>
+
           <Image
             source={machineImages[machine?.machineType?.toLowerCase()] || require("../../../assets/images/add.png")}
             style={styles.image}
+            resizeMode="contain"
           />
         </View>
       </View>
@@ -246,6 +282,7 @@ export default function BookingDetails({ route, navigation }) {
   );
 }
 
+// ------------------ Styles ------------------
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 15, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -253,10 +290,10 @@ const styles = StyleSheet.create({
   cardContent: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   info: { flex: 1, paddingRight: 10 },
   title: { fontSize: 22, fontWeight: "bold", color: "#003366", marginBottom: 5 },
-  price: { fontSize: 16, fontWeight: "600", color: "#28a745", marginTop: 5 },
-  image: { width: 120, height: 120, borderRadius: 15, backgroundColor: "#e0e0e0" },
+  price: { fontSize: 16, fontWeight: "600", color: "#28a745" },
+  image: { width: 100, height: 100, borderRadius: 15, backgroundColor: "#e0e0e0" },
   label: { fontWeight: "bold", fontSize: 16, marginBottom: 8 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 10, padding: 12, marginBottom: 20, backgroundColor: "#fafafa" },
   dayContainer: { width: 35, height: 35, alignItems: "center", justifyContent: "center", borderRadius: 18 },
-  btnContainer: { marginTop: 25, marginBottom: 50 }
+  btnContainer: { marginTop: 25, marginBottom: 20 }
 });
