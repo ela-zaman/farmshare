@@ -27,7 +27,7 @@ import { getAuth } from "firebase/auth";
 import { bdLocations } from "../../data/bdLocation";
 
 // ---------------------------------------------------------
-// 1. CRITICAL: Register Locales OUTSIDE the Component
+// 1. Register Locales OUTSIDE the Component
 // ---------------------------------------------------------
 LocaleConfig.locales["en"] = {
   monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
@@ -45,6 +45,28 @@ LocaleConfig.locales["bn"] = {
   today: "আজ"
 };
 
+// ---------------------------------------------------------
+// Local Images
+// ---------------------------------------------------------
+import tractorImg from "../../../assets/images/Machines/tractor.png";
+import powertillerImg from "../../../assets/images/Machines/powertiller.png";
+import reaperImg from "../../../assets/images/Machines/reaper.png";
+import bedPlanterImg from "../../../assets/images/Machines/bed planter.png";
+import combineHarvesterImg from "../../../assets/images/Machines/combine harvester.png";
+import thresherImg from "../../../assets/images/Machines/thresher.png";
+import sprayerImg from "../../../assets/images/Machines/sprayer.jpg";
+
+const machineImages = {
+  tractor: tractorImg,
+  powertiller: powertillerImg,
+  reaper: reaperImg,
+  bed_planter: bedPlanterImg,
+  combine_harvester: combineHarvesterImg,
+  thresher: thresherImg,
+  sprayer: sprayerImg
+};
+
+// ---------------------------------------------------------
 export default function BookingDetails({ route, navigation }) {
   const { t, i18n } = useTranslation();
   const { machine } = route.params || {};
@@ -59,12 +81,8 @@ export default function BookingDetails({ route, navigation }) {
 
   const isBn = i18n.language === "bn";
 
-  // 2. Point to the correct locale when language changes
-  useEffect(() => {
-    LocaleConfig.defaultLocale = isBn ? "bn" : "en";
-  }, [isBn]);
+  useEffect(() => { LocaleConfig.defaultLocale = isBn ? "bn" : "en"; }, [isBn]);
 
-  // 3. Fetch Data
   useEffect(() => {
     const loadScreenData = async () => {
       setLoading(true);
@@ -110,7 +128,6 @@ export default function BookingDetails({ route, navigation }) {
     } catch (err) { console.error("Booked Dates Err:", err); }
   };
 
-  // Safe Number Converter
   const toBanglaNumber = (num) => {
     if (num === undefined || num === null) return "";
     const bnArr = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
@@ -157,7 +174,6 @@ export default function BookingDetails({ route, navigation }) {
   };
 
   const getDistrictLabel = (key) => (key && bdLocations[key]) ? (isBn ? bdLocations[key].bn : key) : (key || "");
-
   const getUpazilaLabel = (dKey, upKey) => {
     if (!dKey || !upKey || !bdLocations[dKey]) return upKey || "";
     const found = bdLocations[dKey].upazilas?.find(u => u.en?.toLowerCase() === upKey.toLowerCase());
@@ -168,15 +184,26 @@ export default function BookingDetails({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Service Provider Card */}
       <View style={styles.card}>
-        <View style={styles.info}>
-          <Text style={styles.title}>{machine?.machineType || ""}</Text>
-          <Text>{t("provider")}: {machine?.providerName || ""}</Text>
-          <Text>{t("location")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}, {getDistrictLabel(machine?.district)}</Text>
-          <Text style={styles.price}>{t("charge")}: {machine?.tillageCharge || ""} ({machine?.tillageType || ""})</Text>
+        <View style={styles.cardContent}>
+          <View style={styles.info}>
+            <Text style={styles.title}>{machine?.machineType || ""}</Text>
+            <Text>{t("provider")}: {machine?.providerName || ""}</Text>
+            <Text>{t("district")}: {getDistrictLabel(machine?.district)}</Text>
+            <Text>{t("upazila")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}</Text>
+            <Text>{t("village")}: {machine?.village || ""}</Text>
+            <Text>{t("phone")}: {machine?.phone || ""}</Text>
+            <Text style={styles.price}>{t("charge")}: {machine?.tillageCharge || ""} ({machine?.tillageType || ""})</Text>
+          </View>
+          <Image
+            source={machineImages[machine?.machineType?.toLowerCase()] || require("../../../assets/images/add.png")}
+            style={styles.image}
+          />
         </View>
       </View>
 
+      {/* Tillage Input */}
       <Text style={styles.label}>{t("tillage_number")}</Text>
       <TextInput
         style={styles.input}
@@ -186,9 +213,9 @@ export default function BookingDetails({ route, navigation }) {
         placeholder={t("enter_amount")}
       />
 
+      {/* Calendar */}
       <Calendar
-        // 4. CRITICAL: Unique Key forces re-mount on language change
-        key={i18n.language} 
+        key={i18n.language}
         minDate={new Date().toISOString().split("T")[0]}
         markingType="custom"
         markedDates={{ ...(bookedDates || {}), ...(selectedDates || {}) }}
@@ -223,8 +250,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 15, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   card: { backgroundColor: "#f8fbff", padding: 15, borderRadius: 15, marginBottom: 20, borderWidth: 1, borderColor: "#e1efff" },
+  cardContent: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  info: { flex: 1, paddingRight: 10 },
   title: { fontSize: 22, fontWeight: "bold", color: "#003366", marginBottom: 5 },
   price: { fontSize: 16, fontWeight: "600", color: "#28a745", marginTop: 5 },
+  image: { width: 120, height: 120, borderRadius: 15, backgroundColor: "#e0e0e0" },
   label: { fontWeight: "bold", fontSize: 16, marginBottom: 8 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 10, padding: 12, marginBottom: 20, backgroundColor: "#fafafa" },
   dayContainer: { width: 35, height: 35, alignItems: "center", justifyContent: "center", borderRadius: 18 },
