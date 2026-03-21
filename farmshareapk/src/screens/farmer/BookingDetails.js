@@ -7,7 +7,9 @@ import {
   Image,
   TextInput,
   ScrollView,
-  TouchableOpacity
+  Button,
+  TouchableOpacity,
+  ActivityIndicator
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Calendar, LocaleConfig } from "react-native-calendars";
@@ -22,268 +24,209 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
+import { bdLocations } from "../../data/bdLocation";
+
+// ---------------------------------------------------------
+// 1. CRITICAL: Register Locales OUTSIDE the Component
+// ---------------------------------------------------------
+LocaleConfig.locales["en"] = {
+  monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+  monthNamesShort: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+  dayNamesShort: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+  today: "Today"
+};
+
+LocaleConfig.locales["bn"] = {
+  monthNames: ["জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন","জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"],
+  monthNamesShort: ["জানু","ফেব","মার্চ","এপ্রি","মে","জুন","জুল","আগ","সেপ্ট","অক্টো","নভে","ডিসে"],
+  dayNames: ["রবিবার","সোমবার","মঙ্গলবার","বুধবার","বৃহস্পতিবার","শুক্রবার","শনিবার"],
+  dayNamesShort: ["রবি","সোম","মঙ্গল","বুধ","বৃহ","শুক্র","শনি"],
+  today: "আজ"
+};
 
 export default function BookingDetails({ route, navigation }) {
   const { t, i18n } = useTranslation();
   const { machine } = route.params || {};
-
   const auth = getAuth();
   const user = auth.currentUser;
 
   const [bookedDates, setBookedDates] = useState({});
   const [selectedDates, setSelectedDates] = useState({});
   const [userInfo, setUserInfo] = useState(null);
-  const [tillageNumber, setTillageNumber] = useState("");
+  const [tillageAmount, setTillageAmount] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // ----------------------------
-  // 🌐 MULTILINGUAL CALENDAR
-  // ----------------------------
+  const isBn = i18n.language === "bn";
+
+  // 2. Point to the correct locale when language changes
   useEffect(() => {
-    LocaleConfig.locales["bn"] = {
-      monthNames: ["জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন","জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"],
-      monthNamesShort: ["জানু","ফেব","মার্চ","এপ্রি","মে","জুন","জুল","আগ","সেপ্ট","অক্টো","নভে","ডিসে"],
-      dayNames: ["রবিবার","সোমবার","মঙ্গলবার","বুধবার","বৃহস্পতিবার","শুক্রবার","শনিবার"],
-      dayNamesShort: ["রবি","সোম","মঙ্গল","বুধ","বৃহ","শুক্র","শনি"],
-      today: "আজ"
+    LocaleConfig.defaultLocale = isBn ? "bn" : "en";
+  }, [isBn]);
+
+  // 3. Fetch Data
+  useEffect(() => {
+    const loadScreenData = async () => {
+      setLoading(true);
+      await Promise.all([fetchUserInfo(), fetchBookedDates()]);
+      setLoading(false);
     };
+    loadScreenData();
+  }, [machine?.id]);
 
-    LocaleConfig.defaultLocale = i18n.language === "bn" ? "bn" : "en";
-  }, [i18n.language]);
-
-  useEffect(() => {
-    fetchBookedDates();
-    fetchUserInfo();
-  }, []);
-
-  // ----------------------------
-  // USER INFO
-  // ----------------------------
   const fetchUserInfo = async () => {
     if (!user) return;
-
-    const docRef = doc(db, "users", user.uid);
-    const snap = await getDoc(docRef);
-
-    if (snap.exists()) {
-      setUserInfo(snap.data());
-    }
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (snap.exists()) setUserInfo(snap.data());
+    } catch (err) { console.log("User Fetch Err:", err); }
   };
 
-  // ----------------------------
-  // BOOKED DATES
-  // ----------------------------
   const fetchBookedDates = async () => {
-    const q = query(
-      collection(db, "bookings"),
-      where("machineId", "==", machine.id),
-      where("status", "==", "accepted")
-    );
-
-    const snapshot = await getDocs(q);
-
-    let booked = {};
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-
-      data.dates?.forEach((date) => {
-        booked[date] = {
-          selected: true,
-          selectedColor: "red",
-          disabled: true
-        };
+    if (!machine?.id) return;
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("machineId", "==", machine.id),
+        where("status", "==", "accepted")
+      );
+      const snap = await getDocs(q);
+      let booked = {};
+      snap.forEach((d) => {
+        const datesArray = d.data()?.dates || [];
+        datesArray.forEach((date) => {
+          if (date) {
+            booked[date] = {
+              disableTouchEvent: true,
+              customStyles: {
+                container: { backgroundColor: "#ff4d4d", borderRadius: 20 },
+                text: { color: "white", fontWeight: "bold" }
+              }
+            };
+          }
+        });
       });
-    });
-
-    setBookedDates(booked);
+      setBookedDates(booked);
+    } catch (err) { console.error("Booked Dates Err:", err); }
   };
 
-  // ----------------------------
-  // SELECT DATE
-  // ----------------------------
+  // Safe Number Converter
+  const toBanglaNumber = (num) => {
+    if (num === undefined || num === null) return "";
+    const bnArr = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+    return num.toString().split("").map(d => bnArr[d] || d).join("");
+  };
+
   const handleDayPress = (day) => {
-    if (bookedDates[day.dateString]) return;
-
-    setSelectedDates((prev) => {
+    if (!day?.dateString || bookedDates[day.dateString]) return;
+    setSelectedDates(prev => {
       const updated = { ...prev };
-
-      if (updated[day.dateString]) {
-        delete updated[day.dateString];
-      } else {
-        updated[day.dateString] = {
-          selected: true,
-          selectedColor: "#007bff" // 🔵 BLUE
-        };
-      }
-
+      if (updated[day.dateString]) delete updated[day.dateString];
+      else updated[day.dateString] = {
+        customStyles: {
+          container: { backgroundColor: "#007bff", borderRadius: 20 },
+          text: { color: "white", fontWeight: "bold" }
+        }
+      };
       return updated;
     });
   };
 
-  // ----------------------------
-  // BOOKING
-  // ----------------------------
   const handleBooking = async () => {
-    if (!user) {
-      Alert.alert(t("error"), t("login_required"));
-      return;
-    }
-
-    if (!tillageNumber) {
-      Alert.alert(t("error"), "Enter tillage number");
-      return;
-    }
-
+    if (!user) { Alert.alert(t("error"), t("login_required")); return; }
+    if (!tillageAmount) { Alert.alert(t("error"), t("fill_all_fields")); return; }
     const dates = Object.keys(selectedDates);
+    if (dates.length === 0) { Alert.alert(t("error"), t("select_dates")); return; }
 
-    if (dates.length === 0) {
-      Alert.alert(t("error"), t("select_dates"));
-      return;
-    }
-
-    if (!machine?.providerId) {
-      Alert.alert("Error", "Provider ID missing");
-      return;
-    }
-
-    await addDoc(collection(db, "bookings"), {
-      machineId: machine.id,
-      machineType: machine.machineType,
-      providerId: machine.providerId,
-
-      userId: user.uid,
-      userName: userInfo?.name || "Unknown",
-      userPhone: userInfo?.phone || "N/A",
-
-      tillageNumber,
-      dates,
-      status: "pending",
-      createdAt: new Date(),
-    });
-
-    Alert.alert(t("success"), t("booking_sent"));
-    navigation.goBack();
+    try {
+      await addDoc(collection(db, "bookings"), {
+        machineId: machine.id,
+        providerId: machine.providerId,
+        machineType: machine.machineType,
+        userId: user.uid,
+        userName: userInfo?.name || "User",
+        userPhone: userInfo?.phone || "",
+        tillageAmount,
+        dates,
+        status: "pending",
+        createdAt: new Date()
+      });
+      Alert.alert(t("success"), t("booking_sent"));
+      navigation.goBack();
+    } catch (err) { Alert.alert(t("error"), t("booking_failed")); }
   };
 
-  const today = new Date().toISOString().split("T")[0];
+  const getDistrictLabel = (key) => (key && bdLocations[key]) ? (isBn ? bdLocations[key].bn : key) : (key || "");
 
-  // ----------------------------
-  // UI
-  // ----------------------------
+  const getUpazilaLabel = (dKey, upKey) => {
+    if (!dKey || !upKey || !bdLocations[dKey]) return upKey || "";
+    const found = bdLocations[dKey].upazilas?.find(u => u.en?.toLowerCase() === upKey.toLowerCase());
+    return isBn ? (found?.bn || upKey) : (found?.en || upKey);
+  };
+
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#007bff" /></View>;
+
   return (
     <ScrollView style={styles.container}>
-      
-      {/* 🔥 TOP CARD */}
       <View style={styles.card}>
-        <Image
-          source={require("../../../assets/images/Machines/tractor.png")}
-          style={styles.image}
-        />
-
         <View style={styles.info}>
-          <Text style={styles.title}>{machine?.machineType}</Text>
-
-          <Text>{t("provider")}: {machine?.providerName}</Text>
-          <Text>{t("phone")}: {machine?.phone}</Text>
-          <Text>{t("district")}: {machine?.district}</Text>
-          <Text>{t("upazila")}: {machine?.upazilla}</Text>
-          <Text>{t("village")}: {machine?.village}</Text>
-          <Text>{t("charge")}: {machine?.tillageCharge}</Text>
-          <Text>{t("type")}: {machine?.tillageType}</Text>
+          <Text style={styles.title}>{machine?.machineType || ""}</Text>
+          <Text>{t("provider")}: {machine?.providerName || ""}</Text>
+          <Text>{t("location")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}, {getDistrictLabel(machine?.district)}</Text>
+          <Text style={styles.price}>{t("charge")}: {machine?.tillageCharge || ""} ({machine?.tillageType || ""})</Text>
         </View>
       </View>
 
-      {/* 🔢 INPUT */}
       <Text style={styles.label}>{t("tillage_number")}</Text>
       <TextInput
         style={styles.input}
-        placeholder={t("enter_tillage")}
-        value={tillageNumber}
-        onChangeText={setTillageNumber}
+        value={tillageAmount}
+        onChangeText={setTillageAmount}
         keyboardType="numeric"
+        placeholder={t("enter_amount")}
       />
 
-      {/* 📅 CALENDAR */}
       <Calendar
-        minDate={today}
-        markedDates={{ ...bookedDates, ...selectedDates }}
-        onDayPress={handleDayPress}
-        theme={{
-          todayTextColor: "green",
-          arrowColor: "#007bff",
+        // 4. CRITICAL: Unique Key forces re-mount on language change
+        key={i18n.language} 
+        minDate={new Date().toISOString().split("T")[0]}
+        markingType="custom"
+        markedDates={{ ...(bookedDates || {}), ...(selectedDates || {}) }}
+        dayComponent={({ date, state, marking }) => {
+          if (!date) return null;
+          const styles_m = marking?.customStyles || {};
+          return (
+            <TouchableOpacity
+              style={[styles.dayContainer, styles_m.container || {}]}
+              onPress={() => handleDayPress(date)}
+              disabled={!!bookedDates[date.dateString]}
+            >
+              <Text style={{ 
+                color: styles_m.text?.color || (state === "disabled" ? "#ccc" : "#000"),
+                fontWeight: styles_m.text?.fontWeight || "normal"
+              }}>
+                {isBn ? toBanglaNumber(date.day) : date.day}
+              </Text>
+            </TouchableOpacity>
+          );
         }}
       />
 
-      {/* 🚀 BUTTON */}
-      <TouchableOpacity style={styles.button} onPress={handleBooking}>
-        <Text style={styles.buttonText}>{t("book_now")}</Text>
-      </TouchableOpacity>
-
+      <View style={styles.btnContainer}>
+        <Button title={t("book_now")} onPress={handleBooking} color="#007bff" />
+      </View>
     </ScrollView>
   );
 }
 
-// ----------------------------
-// 🎨 STYLES
-// ----------------------------
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 15,
-    backgroundColor: "#f5f7fa"
-  },
-
-  card: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 15,
-    marginBottom: 15,
-    elevation: 4
-  },
-
-  image: {
-    width: 100,
-    height: 100,
-    marginRight: 10
-  },
-
-  info: {
-    flex: 1
-  },
-
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 5
-  },
-
-  label: {
-    fontSize: 14,
-    marginBottom: 5,
-    marginTop: 10
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 15,
-    backgroundColor: "#fff"
-  },
-
-  button: {
-    backgroundColor: "#007bff",
-    padding: 15,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 20
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16
-  }
+  container: { flex: 1, padding: 15, backgroundColor: "#fff" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  card: { backgroundColor: "#f8fbff", padding: 15, borderRadius: 15, marginBottom: 20, borderWidth: 1, borderColor: "#e1efff" },
+  title: { fontSize: 22, fontWeight: "bold", color: "#003366", marginBottom: 5 },
+  price: { fontSize: 16, fontWeight: "600", color: "#28a745", marginTop: 5 },
+  label: { fontWeight: "bold", fontSize: 16, marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 10, padding: 12, marginBottom: 20, backgroundColor: "#fafafa" },
+  dayContainer: { width: 35, height: 35, alignItems: "center", justifyContent: "center", borderRadius: 18 },
+  btnContainer: { marginTop: 25, marginBottom: 50 }
 });
