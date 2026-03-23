@@ -64,6 +64,11 @@
   "farm_machine": "কৃষি যন্ত্র",
   "farmer_name": "কৃষকের নাম",
   "tillage_number": "চাষের সংখ্যা",
-  "book_now": "এখনি বুকিং করুন"
+  "book_now": "এখনি বুকিং করুন",
+  "selected_date": "নির্বাচিত তারিখ",
+  "selected_slots": "নির্বাচিত সময় ",
+  "enter_land_size": "জমির পরিমান লিখুন",
+  "enter_amount":"পরিমান লিখুন",
+  "land_size":"জমির পরিমান"
 
 }

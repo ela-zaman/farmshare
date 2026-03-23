@@ -11,9 +11,8 @@ import {
   Platform,
   Image
 } from "react-native";
-
-import { Picker } from "@react-native-picker/picker";
 import { useTranslation } from "react-i18next";
+import { Picker } from "@react-native-picker/picker";
 
 import { db, auth } from "../../firebase/firebaseConfig";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
@@ -23,71 +22,58 @@ export default function AddMachineScreen() {
   const { t, i18n } = useTranslation();
 
   const [machineType, setMachineType] = useState("");
-  const [tillageType, setTillageType] = useState("");
-  const [tillageCharge, setTillageCharge] = useState("");
+  const [chargePerDecimal, setChargePerDecimal] = useState("");
+  const [chargePerBigha, setChargePerBigha] = useState("");
   const [district, setDistrict] = useState("");
   const [upazilla, setUpazilla] = useState("");
   const [village, setVillage] = useState("");
 
   const scrollViewRef = useRef(null);
-
   const districts = Object.keys(bdLocations);
   const selectedDistrict = bdLocations[district];
   const upazillas = selectedDistrict ? selectedDistrict.upazilas : [];
 
   const getDistrictLabel = (districtKey) => {
     if (!districtKey) return "";
-    return i18n.language === "bn"
-      ? bdLocations[districtKey].bn
-      : districtKey;
+    return i18n.language === "bn" ? bdLocations[districtKey].bn : districtKey;
   };
 
   const getUpazilaLabel = (upazilaObj) => {
     if (!upazilaObj) return "";
-    return i18n.language === "bn"
-      ? upazilaObj.bn
-      : upazilaObj.en;
+    return i18n.language === "bn" ? upazilaObj.bn : upazilaObj.en;
   };
 
   const handleAddMachine = async () => {
     try {
       const user = auth.currentUser;
-      if (!user) {
-        Alert.alert(t("error"), t("user_not_logged_in"));
-        return;
-      }
+      if (!user) return Alert.alert(t("error"), t("user_not_logged_in"));
 
-      // Validation (no machine name)
+      // Validation
       if (
         !machineType ||
-        !tillageType ||
-        !tillageCharge ||
+        (!chargePerDecimal && !chargePerBigha) ||
         !district ||
         !upazilla ||
         !village
       ) {
-        Alert.alert(t("error"), t("fill_all_fields"));
-        return;
+        return Alert.alert(t("error"), t("fill_all_fields"));
       }
 
       let phone = "";
       let providerName = "";
 
-      // Get user data
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
-
       if (userSnap.exists()) {
         const userData = userSnap.data();
         phone = userData.phone || "";
         providerName = userData.name || "Unknown";
       }
 
-      // Save machine
       await addDoc(collection(db, "machines"), {
         machineType,
-        tillageType,
-        tillageCharge,
+        chargePerDecimal,
+        chargePerBigha,
         district,
         upazilla,
         village: village.trim(),
@@ -100,10 +86,9 @@ export default function AddMachineScreen() {
 
       Alert.alert(t("success"), t("machine_added"));
 
-      // Reset form
       setMachineType("");
-      setTillageType("");
-      setTillageCharge("");
+      setChargePerDecimal("");
+      setChargePerBigha("");
       setDistrict("");
       setUpazilla("");
       setVillage("");
@@ -115,10 +100,7 @@ export default function AddMachineScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : null}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : null}>
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.container}
@@ -148,22 +130,22 @@ export default function AddMachineScreen() {
           </Picker>
         </View>
 
-        {/* Charge Type */}
-        <Text style={styles.label}>{t("charge_type")}</Text>
-        <View style={styles.pickerContainer}>
-          <Picker selectedValue={tillageType} onValueChange={setTillageType}>
-            <Picker.Item label={t("select_charge_type")} value="" />
-            <Picker.Item label={t("per_decimal")} value="Per Decimal" />
-            <Picker.Item label={t("per_bigha")} value="Per Bigha" />
-          </Picker>
-        </View>
-
-        {/* Charge */}
-        <Text style={styles.label}>{t("charge")}</Text>
+        {/* Charge Per Decimal */}
+        <Text style={styles.label}>{t("charge_per_decimal")}</Text>
         <TextInput
-          placeholder={t("enter_charge")}
-          value={tillageCharge}
-          onChangeText={setTillageCharge}
+          placeholder={t("enter_charge_per_decimal")}
+          value={chargePerDecimal}
+          onChangeText={setChargePerDecimal}
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        {/* Charge Per Bigha */}
+        <Text style={styles.label}>{t("charge_per_bigha")}</Text>
+        <TextInput
+          placeholder={t("enter_charge_per_bigha")}
+          value={chargePerBigha}
+          onChangeText={setChargePerBigha}
           keyboardType="numeric"
           style={styles.input}
         />
@@ -173,18 +155,11 @@ export default function AddMachineScreen() {
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={district}
-            onValueChange={(value) => {
-              setDistrict(value);
-              setUpazilla("");
-            }}
+            onValueChange={(value) => { setDistrict(value); setUpazilla(""); }}
           >
             <Picker.Item label={t("select_district")} value="" />
             {districts.map((d) => (
-              <Picker.Item
-                key={d}
-                label={getDistrictLabel(d)}
-                value={d}
-              />
+              <Picker.Item key={d} label={getDistrictLabel(d)} value={d} />
             ))}
           </Picker>
         </View>
@@ -192,17 +167,10 @@ export default function AddMachineScreen() {
         {/* Upazila */}
         <Text style={styles.label}>{t("upazila")}</Text>
         <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={upazilla}
-            onValueChange={setUpazilla}
-          >
+          <Picker selectedValue={upazilla} onValueChange={setUpazilla}>
             <Picker.Item label={t("select_upazila")} value="" />
             {upazillas.map((u) => (
-              <Picker.Item
-                key={u.en}
-                label={getUpazilaLabel(u)}
-                value={u.en}
-              />
+              <Picker.Item key={u.en} label={getUpazilaLabel(u)} value={u.en} />
             ))}
           </Picker>
         </View>
@@ -217,13 +185,8 @@ export default function AddMachineScreen() {
         />
 
         {/* Add Button */}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleAddMachine}
-        >
-          <Text style={styles.addButtonText}>
-            {t("add_machine_button")}
-          </Text>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddMachine}>
+          <Text style={styles.addButtonText}>{t("add_machine_button")}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 120 }} />
@@ -232,9 +195,6 @@ export default function AddMachineScreen() {
   );
 }
 
-/* -------------------- */
-/* STYLES               */
-/* -------------------- */
 const styles = StyleSheet.create({
   container: { padding: 20, flexGrow: 1 },
   headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 20 },

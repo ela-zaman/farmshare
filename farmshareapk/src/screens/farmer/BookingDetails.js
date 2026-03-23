@@ -15,7 +15,15 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Calendar, LocaleConfig } from "react-native-calendars";
-import { collection, addDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where
+} from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
 import { bdLocations } from "../../data/bdLocation";
@@ -58,7 +66,7 @@ const machineImages = {
 // ------------------ Time Slots ------------------
 const generateSlots = () => {
   const slots = [];
-  for (let i = 5; i < 22; i++) { // Available hours 5AM to 10PM
+  for (let i = 5; i < 22; i++) {
     let label = "";
     if (i >= 5 && i < 12) label = "morning";
     else if (i >= 12 && i < 15) label = "noon";
@@ -84,15 +92,14 @@ export default function BookingDetails({ route, navigation }) {
 
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
-
-  const [bookedDates, setBookedDates] = useState({}); // { "2026-03-25": {disabled:true, customStyles:{...}} }
-  const [bookedSlotsPerDate, setBookedSlotsPerDate] = useState({}); // { "2026-03-25": ["5-6","6-7", ...] }
+  const [bookedDates, setBookedDates] = useState({});
+  const [bookedSlotsPerDate, setBookedSlotsPerDate] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-
   const [slots] = useState(generateSlots());
   const [tillageAmount, setTillageAmount] = useState("");
+  const [landSize, setLandSize] = useState("");
 
   const isBn = i18n.language === "bn";
   LocaleConfig.defaultLocale = isBn ? "bn" : "en";
@@ -115,7 +122,11 @@ export default function BookingDetails({ route, navigation }) {
 
   const fetchBookings = async () => {
     if (!machine?.id) return;
-    const q = query(collection(db, "bookings"), where("machineId", "==", machine.id), where("status", "==", "accepted"));
+    const q = query(
+      collection(db, "bookings"),
+      where("machineId", "==", machine.id),
+      where("status", "==", "accepted")
+    );
     const snap = await getDocs(q);
 
     const datesObj = {};
@@ -126,16 +137,28 @@ export default function BookingDetails({ route, navigation }) {
       const dates = data?.dates || [];
       const slotsArr = data?.slots || [];
       dates.forEach(date => {
-        // track booked slots
         if (!slotsObj[date]) slotsObj[date] = [];
         slotsObj[date] = [...slotsObj[date], ...slotsArr];
 
-        // check if all slots booked
         const totalSlots = slots.length;
-        if (slotsObj[date].length >= totalSlots) {
+        const bookedCount = slotsObj[date].length;
+
+        if (bookedCount >= totalSlots) {
+          // Fully booked: red
           datesObj[date] = {
             disabled: true,
-            customStyles: { container: { backgroundColor: "#ff4d4d", borderRadius: 20 }, text: { color: "white", fontWeight: "bold" } }
+            customStyles: {
+              container: { backgroundColor: "#ff4d4d", borderRadius: 20 },
+              text: { color: "white", fontWeight: "bold" }
+            }
+          };
+        } else {
+          // Partially booked: yellow
+          datesObj[date] = {
+            customStyles: {
+              container: { backgroundColor: "#ffd700", borderRadius: 20 },
+              text: { color: "black", fontWeight: "bold" }
+            }
           };
         }
       });
@@ -158,7 +181,16 @@ export default function BookingDetails({ route, navigation }) {
     return isBn ? (found?.bn || uKey) : (found?.en || uKey);
   };
 
-  // ---------------- Day & Slot Selection ----------------
+   const CHARGE_TYPE_MAP = {
+    "Per Decimal": "per_decimal",
+    "Per Bigha": "per_bigha"
+  };
+   const getChargeTypeLabel = (value) => {
+    if (!value) return "";
+    const key = CHARGE_TYPE_MAP[value] || CHARGE_TYPE_MAP[value?.trim()];
+    return key ? t(key) : value;
+  };
+
   const handleDayPress = (day) => {
     if (!day?.dateString || bookedDates[day.dateString]?.disabled) return;
     setSelectedDate(day.dateString);
@@ -168,13 +200,13 @@ export default function BookingDetails({ route, navigation }) {
 
   const toggleSlot = (id) => {
     const bookedSlots = bookedSlotsPerDate[selectedDate] || [];
-    if (bookedSlots.includes(id)) return; // cannot select booked slot
+    if (bookedSlots.includes(id)) return;
     setSelectedSlots(selectedSlots.includes(id) ? selectedSlots.filter(s=>s!==id) : [...selectedSlots, id]);
   };
 
   const handleBooking = async () => {
     if (!user) return Alert.alert(t("error"), t("login_required"));
-    if (!tillageAmount) return Alert.alert(t("error"), t("fill_all_fields"));
+    if (!tillageAmount || !landSize) return Alert.alert(t("error"), t("fill_all_fields"));
     if (!selectedDate || !selectedSlots.length) return Alert.alert(t("error"), t("select_time"));
 
     await addDoc(collection(db, "bookings"), {
@@ -185,6 +217,7 @@ export default function BookingDetails({ route, navigation }) {
       userName: userInfo?.name || "",
       userPhone: userInfo?.phone || "",
       tillageAmount,
+      landSize,
       dates: [selectedDate],
       slots: selectedSlots,
       status: "pending",
@@ -193,17 +226,17 @@ export default function BookingDetails({ route, navigation }) {
 
     Alert.alert(t("success"), t("booking_sent"));
     setModalVisible(false);
-    // refetch to update calendar
+    setSelectedSlots([]);
+    setSelectedDate(null);
     fetchBookings();
   };
 
   const getSlotLabel = (slot) => {
-    const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা", night:"রাত" };
+    const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা" };
     const labelText = isBn ? labelsBn[slot.label] : slot.label;
     const formatHour = (h) => {
-      let hour = h % 12;
-      if(hour===0) hour=12;
-      return isBn?toBanglaNumber(hour):hour;
+      let hour = h % 12; if(hour===0) hour=12;
+      return isBn ? toBanglaNumber(hour) : hour;
     };
     return `${labelText} ${formatHour(slot.start)}.00 - ${formatHour(slot.end)}.00 ${isBn?"টা":""}`;
   };
@@ -224,15 +257,19 @@ export default function BookingDetails({ route, navigation }) {
             <Text>{t("village")}: {machine?.village}</Text>
             <Text>{t("phone")}: {machine?.phone}</Text>
             <Text>{t("charge")}: {isBn ? toBanglaNumber(machine?.tillageCharge) : machine?.tillageCharge}</Text>
-            <Text>{t("type")}: {t(machine?.tillageType)}</Text>
+            <Text style={styles.text}>
+                      {t("type")}: {getChargeTypeLabel(machine?.tillageType)}
+                    </Text>
           </View>
           <Image source={machineImages[machine?.machineType?.toLowerCase()]} style={styles.image} resizeMode="contain"/>
         </View>
       </View>
 
-      {/* TILLAGE INPUT */}
+      {/* INPUTS */}
       <Text style={styles.label}>{t("tillage_number")}</Text>
       <TextInput style={styles.input} value={tillageAmount} onChangeText={setTillageAmount} keyboardType="numeric" placeholder={t("enter_amount")}/>
+      <Text style={styles.label}>{t("land_size")}</Text>
+      <TextInput style={styles.input} value={landSize} onChangeText={setLandSize} keyboardType="numeric" placeholder={t("enter_land_size")}/>
 
       {/* CALENDAR */}
       <Calendar
@@ -241,14 +278,16 @@ export default function BookingDetails({ route, navigation }) {
         markingType="custom"
         markedDates={bookedDates}
         onDayPress={handleDayPress}
-        dayComponent={({date, state, marking})=>{
-          if(!date) return null;
+        dayComponent={({ date, state, marking }) => {
+          if (!date) return null;
           const style = marking?.customStyles || {};
-          return <TouchableOpacity style={[styles.dayContainer, style.container]} disabled={marking?.disabled} onPress={()=>handleDayPress(date)}>
-            <Text style={{color:style.text?.color || (state==="disabled"?"#ccc":"#000"), fontWeight: style.text?.fontWeight || "normal"}}>
-              {isBn?toBanglaNumber(date.day):date.day}
-            </Text>
-          </TouchableOpacity>;
+          return (
+            <TouchableOpacity style={[styles.dayContainer, style.container]} disabled={marking?.disabled} onPress={()=>handleDayPress(date)}>
+              <Text style={{ color: style.text?.color || (state==="disabled"?"#ccc":"#000"), fontWeight: style.text?.fontWeight || "normal"}}>
+                {isBn ? toBanglaNumber(date.day) : date.day}
+              </Text>
+            </TouchableOpacity>
+          );
         }}
       />
 
@@ -273,17 +312,11 @@ export default function BookingDetails({ route, navigation }) {
               const bookedSlots = bookedSlotsPerDate[selectedDate] || [];
               const isBooked = bookedSlots.includes(item.id);
               const isSelected = selectedSlots.includes(item.id);
-              return <TouchableOpacity 
-                style={[
-                  styles.slot, 
-                  isBooked && styles.booked, 
-                  isSelected && styles.selected
-                ]} 
-                disabled={isBooked} 
-                onPress={()=>toggleSlot(item.id)}
-              >
-                <Text style={{color: isSelected ? "white" : "black"}}>{getSlotLabel(item)}</Text>
-              </TouchableOpacity>;
+              return (
+                <TouchableOpacity style={[styles.slot, isBooked && styles.booked, isSelected && styles.selected]} disabled={isBooked} onPress={()=>toggleSlot(item.id)}>
+                  <Text style={{color: isSelected ? "white" : "black"}}>{getSlotLabel(item)}</Text>
+                </TouchableOpacity>
+              );
             }}
           />
           <Button title={t("confirm")} onPress={()=>setModalVisible(false)}/>

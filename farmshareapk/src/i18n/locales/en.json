@@ -66,7 +66,12 @@
    "farm_machine": "Farm Machinery",
    "farmer_name": "Farmer Name",
    "tillage_number": "Tillage Number",
-   "book_now": "Book Now"
+   "book_now": "Book Now",
+   "selected_date": "Selected Date",
+   "selected_slots": "Selected Time Slot",
+   "enter_land_size": "Type Land Size",
+   "enter_amount":"Enter Amount",
+   "land_size":"Land Size"
   
  
 
