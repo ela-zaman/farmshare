@@ -22,7 +22,8 @@ import { useTranslation } from "react-i18next";
 export default function InventoryScreen() {
   const [machines, setMachines] = useState([]);
   const navigation = useNavigation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isBn = i18n.language === "bn";
 
   // 🔥 Fetch Machines
   useEffect(() => {
@@ -70,10 +71,17 @@ export default function InventoryScreen() {
     return t(key);
   };
 
+  // 🔥 Convert number to Bangla digits
+  const toBanglaNumber = (num) => {
+    if (!num && num !== 0) return t("not_specified");
+    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+    return num.toString().split("").map(d => bn[d] ?? d).join("");
+  };
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: 120 }} // extra scroll space
+      contentContainerStyle={{ paddingBottom: 120 }}
     >
       {machines.length === 0 ? (
         <Text style={styles.emptyText}>{t("no_machines")}</Text>
@@ -94,22 +102,21 @@ export default function InventoryScreen() {
 
             {/* Info */}
             <View style={styles.info}>
-              {/* Machine Type (Translated, Bigger + Bold) */}
+              {/* Machine Type (Translated) */}
               <Text style={styles.machineType}>
                 {getMachineTypeLabel(machine.machineType)}
               </Text>
 
-              {/* Charge Type (Translated) */}
-              <Text style={styles.chargeType}>
-                {t("type")}:{" "}
-                {machine.tillageType?.toLowerCase() === "per decimal"
-                  ? t("per_decimal")
-                  : t("per_bigha")}
+              {/* Charge per Decimal */}
+              <Text style={styles.chargeInfo}>
+                {t("charge_per_decimal")}:{" "}
+                {isBn ? toBanglaNumber(machine.chargePerDecimal) : machine.chargePerDecimal ?? t("not_specified")}
               </Text>
 
-              {/* Charge */}
+              {/* Charge per Bigha */}
               <Text style={styles.chargeInfo}>
-                {t("charge")}: {machine.tillageCharge}
+                {t("charge_per_bigha")}:{" "}
+                {isBn ? toBanglaNumber(machine.chargePerBigha) : machine.chargePerBigha ?? t("not_specified")}
               </Text>
             </View>
           </TouchableOpacity>
@@ -119,9 +126,6 @@ export default function InventoryScreen() {
   );
 }
 
-/* --------------------------- */
-/* Styles                      */
-/* --------------------------- */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -158,19 +162,15 @@ const styles = StyleSheet.create({
   },
 
   machineType: {
-    fontSize: 16,  // 2px bigger
-    fontWeight: "bold", // bold
+    fontSize: 16,
+    fontWeight: "bold",
     color: "#666",
     marginBottom: 4
-  },
-
-  chargeType: {
-    fontSize: 14,
-    color: "#444",
   },
 
   chargeInfo: {
     fontSize: 14,
     color: "#444",
+    marginBottom: 2
   },
 });

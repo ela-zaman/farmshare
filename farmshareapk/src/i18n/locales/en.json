@@ -71,7 +71,9 @@
    "selected_slots": "Selected Time Slot",
    "enter_land_size": "Type Land Size",
    "enter_amount":"Enter Amount",
-   "land_size":"Land Size"
+   "land_size":"Land Size",
+   "charge_per_decimal": "Charge Per Decimal",
+   "charge_per_bigha": "Charge Per Bigha"
   
  
 

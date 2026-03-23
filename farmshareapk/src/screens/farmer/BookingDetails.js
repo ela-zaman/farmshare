@@ -17,16 +17,16 @@ import { useTranslation } from "react-i18next";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import {
   collection,
-  addDoc,
-  doc,
   getDoc,
   getDocs,
   query,
-  where
+  where,
+  doc
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
 import { bdLocations } from "../../data/bdLocation";
+import { Picker } from "@react-native-picker/picker";
 
 // ------------------ Locale Config ------------------
 LocaleConfig.locales["en"] = {
@@ -83,7 +83,7 @@ const generateSlots = () => {
   return slots;
 };
 
-// ------------------ Component ------------------
+// ------------------ BookingDetails Component ------------------
 export default function BookingDetails({ route, navigation }) {
   const { t, i18n } = useTranslation();
   const { machine } = route.params || {};
@@ -100,6 +100,7 @@ export default function BookingDetails({ route, navigation }) {
   const [slots] = useState(generateSlots());
   const [tillageAmount, setTillageAmount] = useState("");
   const [landSize, setLandSize] = useState("");
+  const [selectedChargeType, setSelectedChargeType] = useState("per_decimal"); // ✅
 
   const isBn = i18n.language === "bn";
   LocaleConfig.defaultLocale = isBn ? "bn" : "en";
@@ -117,7 +118,7 @@ export default function BookingDetails({ route, navigation }) {
   const fetchUser = async () => {
     if (!user) return;
     const snap = await getDoc(doc(db, "users", user.uid));
-    if (snap.exists()) setUserInfo(snap.data());
+    if (snap.exists()) setUserInfo({ ...snap.data(), uid: user.uid });
   };
 
   const fetchBookings = async () => {
@@ -144,7 +145,6 @@ export default function BookingDetails({ route, navigation }) {
         const bookedCount = slotsObj[date].length;
 
         if (bookedCount >= totalSlots) {
-          // Fully booked: red
           datesObj[date] = {
             disabled: true,
             customStyles: {
@@ -153,7 +153,6 @@ export default function BookingDetails({ route, navigation }) {
             }
           };
         } else {
-          // Partially booked: yellow
           datesObj[date] = {
             customStyles: {
               container: { backgroundColor: "#ffd700", borderRadius: 20 },
@@ -181,16 +180,6 @@ export default function BookingDetails({ route, navigation }) {
     return isBn ? (found?.bn || uKey) : (found?.en || uKey);
   };
 
-   const CHARGE_TYPE_MAP = {
-    "Per Decimal": "per_decimal",
-    "Per Bigha": "per_bigha"
-  };
-   const getChargeTypeLabel = (value) => {
-    if (!value) return "";
-    const key = CHARGE_TYPE_MAP[value] || CHARGE_TYPE_MAP[value?.trim()];
-    return key ? t(key) : value;
-  };
-
   const handleDayPress = (day) => {
     if (!day?.dateString || bookedDates[day.dateString]?.disabled) return;
     setSelectedDate(day.dateString);
@@ -204,31 +193,22 @@ export default function BookingDetails({ route, navigation }) {
     setSelectedSlots(selectedSlots.includes(id) ? selectedSlots.filter(s=>s!==id) : [...selectedSlots, id]);
   };
 
-  const handleBooking = async () => {
+  // ---------------- Updated handleBooking ----------------
+  const handleBooking = () => {
     if (!user) return Alert.alert(t("error"), t("login_required"));
     if (!tillageAmount || !landSize) return Alert.alert(t("error"), t("fill_all_fields"));
     if (!selectedDate || !selectedSlots.length) return Alert.alert(t("error"), t("select_time"));
 
-    await addDoc(collection(db, "bookings"), {
-      machineId: machine.id,
-      providerId: machine.providerId,
-      machineType: machine.machineType,
-      userId: user.uid,
-      userName: userInfo?.name || "",
-      userPhone: userInfo?.phone || "",
-      tillageAmount,
-      landSize,
-      dates: [selectedDate],
-      slots: selectedSlots,
-      status: "pending",
-      createdAt: new Date()
+    // Navigate to BookingSummary
+    navigation.navigate("BookingSummary", {
+      machine,
+      userInfo,
+      selectedDate,
+      selectedSlots,
+      tillageAmount: parseFloat(tillageAmount),
+      landSize: parseFloat(landSize),
+      chargeType: selectedChargeType
     });
-
-    Alert.alert(t("success"), t("booking_sent"));
-    setModalVisible(false);
-    setSelectedSlots([]);
-    setSelectedDate(null);
-    fetchBookings();
   };
 
   const getSlotLabel = (slot) => {
@@ -256,10 +236,8 @@ export default function BookingDetails({ route, navigation }) {
             <Text>{t("upazilla")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}</Text>
             <Text>{t("village")}: {machine?.village}</Text>
             <Text>{t("phone")}: {machine?.phone}</Text>
-            <Text>{t("charge")}: {isBn ? toBanglaNumber(machine?.tillageCharge) : machine?.tillageCharge}</Text>
-            <Text style={styles.text}>
-                      {t("type")}: {getChargeTypeLabel(machine?.tillageType)}
-                    </Text>
+            <Text>{t("charge_per_bigha")}: {isBn ? toBanglaNumber(machine?.chargePerBigha) : machine?.chargePerBigha}</Text>
+            <Text>{t("charge_per_decimal")}: {isBn ? toBanglaNumber(machine?.chargePerDecimal) : machine?.chargePerDecimal}</Text>
           </View>
           <Image source={machineImages[machine?.machineType?.toLowerCase()]} style={styles.image} resizeMode="contain"/>
         </View>
@@ -271,12 +249,23 @@ export default function BookingDetails({ route, navigation }) {
       <Text style={styles.label}>{t("land_size")}</Text>
       <TextInput style={styles.input} value={landSize} onChangeText={setLandSize} keyboardType="numeric" placeholder={t("enter_land_size")}/>
 
-      {/* CALENDAR */}
+      <Text style={styles.label}>{t("unit_of_charge_type")}</Text>
+      <View style={styles.picker}>
+        <Picker selectedValue={selectedChargeType} onValueChange={setSelectedChargeType}>
+          <Picker.Item label={t("per_decimal")} value="per_decimal"/>
+          <Picker.Item label={t("per_bigha")} value="per_bigha"/>
+        </Picker>
+      </View>
+
+      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>{t("select_date_and_time")}</Text>
       <Calendar
         key={i18n.language}
         minDate={new Date().toISOString().split("T")[0]}
         markingType="custom"
-        markedDates={bookedDates}
+        markedDates={{
+          ...bookedDates,
+          ...(selectedDate ? {[selectedDate]: {customStyles:{container:{backgroundColor:"#007bff", borderRadius:20}, text:{color:"white", fontWeight:"bold"}}}} : {})
+        }}
         onDayPress={handleDayPress}
         dayComponent={({ date, state, marking }) => {
           if (!date) return null;
@@ -291,7 +280,12 @@ export default function BookingDetails({ route, navigation }) {
         }}
       />
 
-      {/* SELECTED SLOTS */}
+      {selectedDate && (
+        <View style={{ marginTop: 10, padding: 10, backgroundColor: "#e6f0ff", borderRadius: 10 }}>
+          <Text style={{ fontWeight: "bold" }}>{t("selected_date")}: {isBn ? toBanglaNumber(selectedDate) : selectedDate}</Text>
+        </View>
+      )}
+
       {selectedSlots.length>0 && <View style={{marginTop:15}}>
         <Text style={{fontWeight:"bold"}}>{t("selected_slots")}:</Text>
         {selectedSlots.map(s=><Text key={s}>{getSlotLabel(slots.find(sl=>sl.id===s))}</Text>)}
@@ -337,6 +331,7 @@ const styles = StyleSheet.create({
   image:{width:100,height:100,borderRadius:15,backgroundColor:"#e0e0e0"},
   label:{fontWeight:"bold",fontSize:16,marginBottom:8},
   input:{borderWidth:1,borderColor:"#ccc",borderRadius:10,padding:12,marginBottom:20,backgroundColor:"#fafafa"},
+  picker:{borderWidth:1,borderColor:"#ccc",borderRadius:10,marginBottom:20,backgroundColor:"#fafafa"},
   btnContainer:{marginTop:25,marginBottom:20},
   dayContainer:{width:35,height:35,alignItems:"center",justifyContent:"center",borderRadius:18},
   slot:{padding:12,marginVertical:5,borderRadius:10,backgroundColor:"#eee"},

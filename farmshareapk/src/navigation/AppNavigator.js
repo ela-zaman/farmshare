@@ -25,6 +25,7 @@ import ProviderBookingRequests from "../screens/provider/ProviderBookingRequests
 import SearchResult from "../screens/farmer/SearchResult";
 import BookingDetails from "../screens/farmer/BookingDetails";
 import FarmerNotifications from "../screens/farmer/FarmerNotifications";
+import BookingSummary from "../screens/farmer/BookingSummary";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -73,6 +74,7 @@ export default function AppNavigator() {
    <Stack.Screen name="SearchResult" component={SearchResult} />
    <Stack.Screen name="BookingDetails" component={BookingDetails} />
    <Stack.Screen name="FarmerNotifications" component={FarmerNotifications} />
+   <Stack.Screen name="BookingSummary" component={BookingSummary} />
     </Stack.Navigator>
   );
 }

@@ -133,7 +133,7 @@ export default function AddMachineScreen() {
         {/* Charge Per Decimal */}
         <Text style={styles.label}>{t("charge_per_decimal")}</Text>
         <TextInput
-          placeholder={t("enter_charge_per_decimal")}
+          placeholder={t("enter_amount")}
           value={chargePerDecimal}
           onChangeText={setChargePerDecimal}
           keyboardType="numeric"
@@ -143,7 +143,7 @@ export default function AddMachineScreen() {
         {/* Charge Per Bigha */}
         <Text style={styles.label}>{t("charge_per_bigha")}</Text>
         <TextInput
-          placeholder={t("enter_charge_per_bigha")}
+          placeholder={t("enter_amount")}
           value={chargePerBigha}
           onChangeText={setChargePerBigha}
           keyboardType="numeric"
@@ -165,7 +165,7 @@ export default function AddMachineScreen() {
         </View>
 
         {/* Upazila */}
-        <Text style={styles.label}>{t("upazila")}</Text>
+        <Text style={styles.label}>{t("upazilla")}</Text>
         <View style={styles.pickerContainer}>
           <Picker selectedValue={upazilla} onValueChange={setUpazilla}>
             <Picker.Item label={t("select_upazila")} value="" />

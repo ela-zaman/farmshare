@@ -16,15 +16,19 @@ import { useNavigation } from "@react-navigation/native";
 
 export default function SearchResult({ route }) {
   const { t, i18n } = useTranslation();
-
-  // ✅ IMPORTANT: ensure correct param naming
   const { machineType, district, upazilla } = route.params || {};
   const navigation = useNavigation();
 
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const normalize = (text) => text?.toString().trim().toLowerCase();
+  const isBn = i18n.language === "bn";
+
+  // ✅ SAFE normalize (FIXED BUG)
+  const normalize = (text) => {
+    if (!text) return "";
+    return text.toString().trim().toLowerCase();
+  };
 
   useEffect(() => {
     fetchMachines();
@@ -32,11 +36,7 @@ export default function SearchResult({ route }) {
 
   const fetchMachines = async () => {
     try {
-      console.log("PARAMS:", { machineType, district, upazilla });
-
       let q = collection(db, "machines");
-
-      // ✅ Build Firestore query dynamically
       const conditions = [];
 
       if (machineType) {
@@ -47,7 +47,6 @@ export default function SearchResult({ route }) {
         conditions.push(where("district", "==", district));
       }
 
-      // ⚠️ FIX: use correct field name (Firestore usually uses "upazila")
       if (upazilla) {
         conditions.push(where("upazilla", "==", upazilla));
       }
@@ -62,8 +61,6 @@ export default function SearchResult({ route }) {
         id: doc.id,
         ...doc.data()
       }));
-
-      console.log("FILTERED DATA:", data);
 
       setMachines(data);
     } catch (error) {
@@ -97,7 +94,7 @@ export default function SearchResult({ route }) {
 
   const getDistrictLabel = (districtKey) => {
     if (!districtKey) return "";
-    return i18n.language === "bn"
+    return isBn
       ? bdLocations[districtKey]?.bn || districtKey
       : districtKey;
   };
@@ -106,17 +103,14 @@ export default function SearchResult({ route }) {
     if (!districtKey || !upazilaEn) return "";
 
     const districtData = bdLocations[districtKey];
-    const upazilaObj = districtData?.upazilas.find(
-      (u) => normalize(u.en) === normalize(upazilaEn)
+
+    const upazilaObj = districtData?.upazilas?.find(
+      (u) => normalize(u?.en) === normalize(upazilaEn)
     );
 
     if (!upazilaObj) return upazilaEn;
 
-    return i18n.language === "bn" ? upazilaObj.bn : upazilaObj.en;
-  };
-
-  const getVillageLabel = (village) => {
-    return village || "";
+    return isBn ? upazilaObj.bn : upazilaObj.en;
   };
 
   const MACHINE_TYPE_MAP = {
@@ -129,21 +123,19 @@ export default function SearchResult({ route }) {
     sprayer: "sprayer"
   };
 
-  const CHARGE_TYPE_MAP = {
-    "Per Decimal": "per_decimal",
-    "Per Bigha": "per_bigha"
-  };
-
   const getMachineTypeLabel = (value) => {
     if (!value) return "";
-    const key = MACHINE_TYPE_MAP[value.toLowerCase()];
+    const key = MACHINE_TYPE_MAP[value?.toLowerCase?.()];
     return key ? t(key) : value;
   };
 
-  const getChargeTypeLabel = (value) => {
-    if (!value) return "";
-    const key = CHARGE_TYPE_MAP[value] || CHARGE_TYPE_MAP[value?.trim()];
-    return key ? t(key) : value;
+  // ✅ TAKA FORMAT
+  const formatTaka = (amount) => {
+    if (!amount) return isBn ? "০ টাকা" : "0 Taka";
+
+    return isBn
+      ? `${amount} টাকা`
+      : `${amount} Taka`;
   };
 
   // ------------------------------
@@ -183,15 +175,16 @@ export default function SearchResult({ route }) {
         </Text>
 
         <Text style={styles.text}>
-          {t("village")}: {getVillageLabel(item.village)}
+          {t("village")}: {item.village || ""}
+        </Text>
+
+        {/* ✅ NEW MULTILINGUAL CHARGES */}
+        <Text style={styles.text}>
+          {t("charge_per_decimal")}: {formatTaka(item.chargePerDecimal)}
         </Text>
 
         <Text style={styles.text}>
-          {t("charge")}: {item.tillageCharge}
-        </Text>
-
-        <Text style={styles.text}>
-          {t("type")}: {getChargeTypeLabel(item.tillageType)}
+          {t("charge_per_bigha")}: {formatTaka(item.chargePerBigha)}
         </Text>
       </View>
     </TouchableOpacity>
@@ -220,6 +213,10 @@ export default function SearchResult({ route }) {
     />
   );
 }
+
+// ------------------------------
+// Styles
+// ------------------------------
 
 const styles = StyleSheet.create({
   card: {
