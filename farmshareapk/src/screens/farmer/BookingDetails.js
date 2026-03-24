@@ -82,7 +82,64 @@ const generateSlots = () => {
   }
   return slots;
 };
+// ------------------ Tillage Time Component ------------------
+const TillageTimeCalculator = ({
+  tillageAmount,
+  landSize,
+  selectedChargeType,
+  isBn,
+  toBanglaNumber,
+  t
+}) => {
+  const tillage = parseFloat(tillageAmount);
+  const land = parseFloat(landSize);
 
+  if (!tillage || !land) return null;
+
+  let totalMinutes = 0;
+
+  if (selectedChargeType === "per_bigha") {
+    // 1 hour per bigha
+    totalMinutes = tillage * land * 60;
+  } else {
+    // 2 minutes per decimal
+    totalMinutes = tillage * land * 2;
+  }
+
+  // Convert to hours
+  let totalHours = totalMinutes / 60;
+
+  // Minimum 1 hour
+  if (totalHours < 1) totalHours = 1;
+
+  // Slots (1 slot = 1 hour)
+  const totalSlots = Math.ceil(totalHours);
+
+  return (
+    <View style={{
+      backgroundColor: "#e6f7ff",
+      padding: 15,
+      borderRadius: 12,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: "#b3e0ff"
+    }}>
+      <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 5 }}>
+        {t("total_tillage_time")}
+      </Text>
+
+      <Text>
+        {t("total_time")}:{" "}
+        {isBn ? toBanglaNumber(totalHours.toFixed(2)) : totalHours.toFixed(2)} {t("hour")}
+      </Text>
+
+      <Text>
+        {t("required_slots")}:{" "}
+        {isBn ? toBanglaNumber(totalSlots) : totalSlots}
+      </Text>
+    </View>
+  );
+};
 // ------------------ BookingDetails Component ------------------
 export default function BookingDetails({ route, navigation }) {
   const { t, i18n } = useTranslation();
@@ -257,6 +314,14 @@ export default function BookingDetails({ route, navigation }) {
           <Picker.Item label={t("per_bigha")} value="per_bigha"/>
         </Picker>
       </View>
+      <TillageTimeCalculator
+  tillageAmount={tillageAmount}
+  landSize={landSize}
+  selectedChargeType={selectedChargeType}
+  isBn={isBn}
+  toBanglaNumber={toBanglaNumber}
+  t={t}
+/>
 
       <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>{t("select_date_and_time")}</Text>
       <Calendar
