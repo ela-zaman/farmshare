@@ -205,6 +205,7 @@ export default function BookingDetails({ route, navigation }) {
       userInfo,
       selectedDate,
       selectedSlots,
+      slots,
       tillageAmount: parseFloat(tillageAmount),
       landSize: parseFloat(landSize),
       chargeType: selectedChargeType

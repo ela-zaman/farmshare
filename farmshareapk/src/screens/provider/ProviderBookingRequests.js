@@ -19,10 +19,12 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
+import { bdLocations } from "../../data/bdLocation";
 
 export default function ProviderBookingRequests() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [requests, setRequests] = useState([]);
+  const isBn = i18n.language === "bn";
 
   const auth = getAuth();
   const provider = auth.currentUser;
@@ -30,7 +32,6 @@ export default function ProviderBookingRequests() {
   useEffect(() => {
     if (!provider) return;
 
-    // 🔥 REALTIME LISTENER
     const q = query(
       collection(db, "bookings"),
       where("providerId", "==", provider.uid),
@@ -46,7 +47,7 @@ export default function ProviderBookingRequests() {
       setRequests(result);
     });
 
-    return () => unsubscribe(); // cleanup
+    return () => unsubscribe();
   }, [provider]);
 
   // ---------------------------
@@ -55,7 +56,7 @@ export default function ProviderBookingRequests() {
   const handleDecision = async (id, decision) => {
     try {
       await updateDoc(doc(db, "bookings", id), {
-        status: decision, // "accepted" or "denied"
+        status: decision
       });
 
       Alert.alert(
@@ -93,48 +94,104 @@ export default function ProviderBookingRequests() {
   };
 
   // ---------------------------
+  // Helper Functions
+  // ---------------------------
+  const toBanglaNumber = (num) => {
+    if (num === undefined || num === null) return "০";
+    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+    return num.toString().split("").map(d => bn[d] || d).join("");
+  };
+
+  const getDistrictLabel = (district) => {
+    if (!district) return t("unknown");
+    const data = bdLocations[district];
+    return isBn ? (data?.bn || district) : (data?.en || district);
+  };
+
+  const getUpazilaLabel = (district, upazila) => {
+    if (!district || !upazila) return t("unknown");
+    const upazilas = bdLocations[district]?.upazilas || [];
+    const found = upazilas.find(u => u.en?.toLowerCase() === upazila?.toLowerCase());
+    return isBn ? (found?.bn || upazila) : (found?.en || upazila);
+  };
+
+  const formatSlots = (slots) => {
+    if (!slots?.length) return t("no_slots");
+    return slots.map(s => {
+      const [start, end] = s.split("-").map(Number);
+      const startHr = start % 12 === 0 ? 12 : start % 12;
+      const endHr = end % 12 === 0 ? 12 : end % 12;
+      const periodStart = start < 12 ? t("am") : t("pm");
+      const periodEnd = end <= 12 ? t("am") : t("pm");
+      return `${startHr}:00${periodStart} - ${endHr}:00${periodEnd}`;
+    }).join(", ");
+  };
+
+  const calculateTotalHours = (item) => {
+    if (!item.slots?.length) return 0;
+    return item.slots.length;
+  };
+
+  const calculateTotalCharge = (item) => {
+    const landSize = Number(item.landSize || 0);
+    const tillage = Number(item.tillageAmount || 0);
+    const chargeType = item.chargeType;
+    const perDecimal = Number(item.chargePerDecimal || 0);
+    const perBigha = Number(item.chargePerBigha || 0);
+
+    if (chargeType === "per_decimal") return landSize * tillage * perDecimal;
+    if (chargeType === "per_bigha") return landSize * tillage * perBigha;
+    return 0;
+  };
+
+  // ---------------------------
   // Render Card
   // ---------------------------
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      {/* Image */}
-      <Image
-        source={getMachineImage(item.machineType)}
-        style={styles.image}
-      />
+  const renderItem = ({ item }) => {
+    const totalCharge = calculateTotalCharge(item);
+    const totalHours = calculateTotalHours(item);
 
-      {/* Info */}
-      <View style={styles.info}>
-        <Text style={styles.title}>{item.machineType}</Text>
+    return (
+      <View style={styles.card}>
+        <Image
+          source={getMachineImage(item.machineType)}
+          style={styles.image}
+        />
+        <View style={styles.info}>
+          <Text style={styles.title}>{item.machineType || t("unknown_machine")}</Text>
 
-        <Text>{t("farmer_name")}: {item.userName}</Text>
-        <Text>{t("phone")}: {item.userPhone}</Text>
+          <Text>{t("farmer_name")}: {item.userName || t("unknown")}</Text>
+          <Text>{t("phone")}: {item.userPhone || t("unknown")}</Text>
 
-        <Text>{t("dates")}:</Text>
-        <Text style={{ fontSize: 12 }}>
-          {item.dates?.join(", ")}
-        </Text>
+          <Text>{t("district")}: {getDistrictLabel(item.district)}</Text>
+          <Text>{t("upazilla")}: {getUpazilaLabel(item.district, item.upazilla)}</Text>
 
-        {/* Buttons */}
-        <View style={styles.buttonRow}>
-          <Button
-            title={t("accept")}
-            onPress={() => handleDecision(item.id, "accepted")}
-          />
-          <View style={{ width: 10 }} />
-          <Button
-            title={t("deny")}
-            color="red"
-            onPress={() => handleDecision(item.id, "denied")}
-          />
+          <Text>{t("land_size")}: {isBn ? toBanglaNumber(item.landSize || 0) : (item.landSize || 0)}</Text>
+          <Text>{t("tillage_number")}: {isBn ? toBanglaNumber(item.tillageAmount || 0) : (item.tillageAmount || 0)}</Text>
+          <Text>{t("charge_type")}: {item.chargeType === "per_decimal" ? t("per_decimal") : t("per_bigha")}</Text>
+          <Text>{t("total_taka")}: {isBn ? toBanglaNumber(totalCharge.toFixed(2)) : totalCharge.toFixed(2)}</Text>
+
+          <Text>{t("dates")}: {item.dates?.length ? item.dates.join(", ") : t("no_dates")}</Text>
+          <Text>{t("time_slots")}: {item.slots?.length ? formatSlots(item.slots) : t("no_slots")}</Text>
+          <Text>{t("total_hours")}: {isBn ? toBanglaNumber(totalHours) : totalHours}</Text>
+
+          <View style={styles.buttonRow}>
+            <Button
+              title={t("accept")}
+              onPress={() => handleDecision(item.id, "accepted")}
+            />
+            <View style={{ width: 10 }} />
+            <Button
+              title={t("deny")}
+              color="red"
+              onPress={() => handleDecision(item.id, "denied")}
+            />
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
-  // ---------------------------
-  // UI
-  // ---------------------------
   return (
     <FlatList
       data={requests}
