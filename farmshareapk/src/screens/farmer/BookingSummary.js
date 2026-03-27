@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 
+// ---------------- BookingSummary Component ----------------
 export default function BookingSummary({ route, navigation }) {
   const { t, i18n } = useTranslation();
   const isBn = i18n.language === "bn";
@@ -20,7 +21,7 @@ export default function BookingSummary({ route, navigation }) {
     userInfo,
     selectedDate,
     selectedSlots,
-    slots, // Pass full slots array from BookingDetails
+    slots, // pass full slots array from BookingDetails
     tillageAmount,
     landSize,
     chargeType
@@ -38,16 +39,14 @@ export default function BookingSummary({ route, navigation }) {
     return num.toString().split("").map(d => bn[d] || d).join("");
   };
 
-  // Convert slot to human-readable format
   const getSlotLabel = (slot) => {
-    if (!slot) return "";
     const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা" };
     const labelText = isBn ? labelsBn[slot.label] : slot.label;
     const formatHour = (h) => {
       let hour = h % 12; if(hour===0) hour=12;
       return isBn ? toBanglaNumber(hour) : hour;
     };
-    return `${labelText} ${formatHour(slot.start)}:00 - ${formatHour(slot.end)}:00 ${isBn ? "টা" : ""}`;
+    return `${labelText} ${formatHour(slot.start)}.00 - ${formatHour(slot.end)}.00 ${isBn?"টা":""}`;
   };
 
   useEffect(() => {
@@ -63,7 +62,6 @@ export default function BookingSummary({ route, navigation }) {
         setChargePerDecimal(perDecimal);
         setChargePerBigha(perBigha);
 
-        // Calculate total charge
         let total = 0;
         if (chargeType === "per_decimal") {
           total = perDecimal * landSize * tillageAmount;
@@ -72,14 +70,14 @@ export default function BookingSummary({ route, navigation }) {
         }
         setTotalCharge(total);
 
-        // Human-readable slot labels
+        // Get human-readable slot labels
         const labels = selectedSlots.map(id => {
           const slot = slots.find(s => s.id === id);
           return slot ? getSlotLabel(slot) : id;
         });
         setSlotLabels(labels);
 
-        // Total hours
+        // Calculate total hours
         const hours = selectedSlots.reduce((sum, id) => {
           const slot = slots.find(s => s.id === id);
           return slot ? sum + (slot.end - slot.start) : sum;
@@ -109,7 +107,8 @@ export default function BookingSummary({ route, navigation }) {
         dates: [selectedDate],
         slots: selectedSlots,
         status: "pending",
-        createdAt: new Date()
+        createdAt: new Date(),
+        address:userInfo.address
       });
 
       Alert.alert(t("success"), t("booking_sent"));
@@ -134,13 +133,9 @@ export default function BookingSummary({ route, navigation }) {
         <Text>{t("selected_date")}: {isBn ? toBanglaNumber(selectedDate) : selectedDate}</Text>
 
         <Text>{t("selected_slots")}:</Text>
-        {slotLabels.length > 0 ? (
-          slotLabels.map((label, idx) => (
-            <Text key={idx}>- {label}</Text>
-          ))
-        ) : (
-          <Text>{t("no_slots_selected")}</Text>
-        )}
+        {slotLabels.map((label, idx) => (
+          <Text key={idx}>- {label}</Text>
+        ))}
 
         <Text>{t("total_time")}: {isBn ? toBanglaNumber(totalHours) : totalHours} {t("hours")}</Text>
         <Text>{t("land_size")}: {isBn ? toBanglaNumber(landSize) : landSize}</Text>
@@ -158,6 +153,7 @@ export default function BookingSummary({ route, navigation }) {
   );
 }
 
+// ---------------- Styles ----------------
 const styles = StyleSheet.create({
   container:{flex:1,padding:15,backgroundColor:"#fff"},
   title:{fontSize:22,fontWeight:"bold",marginBottom:10,color:"#003366"},

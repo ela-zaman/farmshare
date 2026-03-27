@@ -6,7 +6,7 @@ import {
   FlatList,
   Button,
   Image,
-  Alert
+  Alert,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,7 +15,7 @@ import {
   where,
   onSnapshot,
   updateDoc,
-  doc
+  doc,
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
@@ -24,11 +24,49 @@ import { bdLocations } from "../../data/bdLocation";
 export default function ProviderBookingRequests() {
   const { t, i18n } = useTranslation();
   const [requests, setRequests] = useState([]);
-  const isBn = i18n.language === "bn";
 
   const auth = getAuth();
   const provider = auth.currentUser;
 
+  const isBn = i18n.language === "bn";
+
+  // ---------------- Utils ----------------
+  const toBanglaNumber = (num) => {
+    if (num === null || num === undefined) return "০";
+    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+    return num.toString().split("").map(d => bn[d] || d).join("");
+  };
+
+  const getDistrictLabel = (key) => isBn ? bdLocations[key]?.bn || key : key;
+  const getUpazilaLabel = (dKey, uKey) => {
+    const upazilas = bdLocations[dKey]?.upazilas || [];
+    const found = upazilas.find(u => u.en?.toLowerCase()===uKey?.toLowerCase());
+    return isBn ? (found?.bn || uKey) : (found?.en || uKey);
+  };
+
+  const calculateTotalCharge = (item) => {
+    const landSize = parseFloat(item.landSize) || 0;
+    const tillageAmount = parseFloat(item.tillageAmount) || 0;
+    const chargePerDecimal = parseFloat(item.chargePerDecimal) || 0;
+    const chargePerBigha = parseFloat(item.chargePerBigha) || 0;
+
+    if (item.chargeType === "per_decimal") {
+      return chargePerDecimal * landSize * tillageAmount;
+    } else {
+      return chargePerBigha * landSize * tillageAmount;
+    }
+  };
+
+  const calculateTotalHours = (item) => {
+    return item.slots?.length || 0;
+  };
+
+  const formatSlots = (slots) => {
+    if (!slots || !slots.length) return t("no_slots");
+    return slots.map(s => `${s.split("-")[0]}:00 - ${s.split("-")[1]}:00`).join(", ");
+  };
+
+  // ---------------- Fetch Bookings ----------------
   useEffect(() => {
     if (!provider) return;
 
@@ -43,20 +81,17 @@ export default function ProviderBookingRequests() {
         id: docSnap.id,
         ...docSnap.data(),
       }));
-
       setRequests(result);
     });
 
     return () => unsubscribe();
   }, [provider]);
 
-  // ---------------------------
-  // Accept / Deny Booking
-  // ---------------------------
+  // ---------------- Accept / Deny Booking ----------------
   const handleDecision = async (id, decision) => {
     try {
       await updateDoc(doc(db, "bookings", id), {
-        status: decision
+        status: decision,
       });
 
       Alert.alert(
@@ -65,21 +100,16 @@ export default function ProviderBookingRequests() {
           ? t("booking_accepted")
           : t("booking_denied")
       );
-
     } catch (err) {
       console.log("Error updating booking:", err);
       Alert.alert(t("error"), t("update_failed"));
     }
   };
 
-  // ---------------------------
-  // Machine Image Mapping
-  // ---------------------------
+  // ---------------- Machine Images ----------------
   const getMachineImage = (type) => {
     if (!type) return require("../../../assets/images/add.png");
-
     const key = type.toLowerCase().trim().replace(/\s/g, "_");
-
     const IMAGE_MAP = {
       tractor: require("../../../assets/images/Machines/tractor.png"),
       powertiller: require("../../../assets/images/Machines/powertiller.png"),
@@ -87,66 +117,12 @@ export default function ProviderBookingRequests() {
       bed_planter: require("../../../assets/images/Machines/bed planter.png"),
       combine_harvester: require("../../../assets/images/Machines/combine harvester.png"),
       thresher: require("../../../assets/images/Machines/thresher.png"),
-      sprayer: require("../../../assets/images/Machines/sprayer.jpg")
+      sprayer: require("../../../assets/images/Machines/sprayer.jpg"),
     };
-
     return IMAGE_MAP[key] || require("../../../assets/images/add.png");
   };
 
-  // ---------------------------
-  // Helper Functions
-  // ---------------------------
-  const toBanglaNumber = (num) => {
-    if (num === undefined || num === null) return "০";
-    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
-    return num.toString().split("").map(d => bn[d] || d).join("");
-  };
-
-  const getDistrictLabel = (district) => {
-    if (!district) return t("unknown");
-    const data = bdLocations[district];
-    return isBn ? (data?.bn || district) : (data?.en || district);
-  };
-
-  const getUpazilaLabel = (district, upazila) => {
-    if (!district || !upazila) return t("unknown");
-    const upazilas = bdLocations[district]?.upazilas || [];
-    const found = upazilas.find(u => u.en?.toLowerCase() === upazila?.toLowerCase());
-    return isBn ? (found?.bn || upazila) : (found?.en || upazila);
-  };
-
-  const formatSlots = (slots) => {
-    if (!slots?.length) return t("no_slots");
-    return slots.map(s => {
-      const [start, end] = s.split("-").map(Number);
-      const startHr = start % 12 === 0 ? 12 : start % 12;
-      const endHr = end % 12 === 0 ? 12 : end % 12;
-      const periodStart = start < 12 ? t("am") : t("pm");
-      const periodEnd = end <= 12 ? t("am") : t("pm");
-      return `${startHr}:00${periodStart} - ${endHr}:00${periodEnd}`;
-    }).join(", ");
-  };
-
-  const calculateTotalHours = (item) => {
-    if (!item.slots?.length) return 0;
-    return item.slots.length;
-  };
-
-  const calculateTotalCharge = (item) => {
-    const landSize = Number(item.landSize || 0);
-    const tillage = Number(item.tillageAmount || 0);
-    const chargeType = item.chargeType;
-    const perDecimal = Number(item.chargePerDecimal || 0);
-    const perBigha = Number(item.chargePerBigha || 0);
-
-    if (chargeType === "per_decimal") return landSize * tillage * perDecimal;
-    if (chargeType === "per_bigha") return landSize * tillage * perBigha;
-    return 0;
-  };
-
-  // ---------------------------
-  // Render Card
-  // ---------------------------
+  // ---------------- Render Each Booking ----------------
   const renderItem = ({ item }) => {
     const totalCharge = calculateTotalCharge(item);
     const totalHours = calculateTotalHours(item);
@@ -158,21 +134,18 @@ export default function ProviderBookingRequests() {
           style={styles.image}
         />
         <View style={styles.info}>
-          <Text style={styles.title}>{item.machineType || t("unknown_machine")}</Text>
+          <Text style={styles.title}>{item.machineType}</Text>
 
-          <Text>{t("farmer_name")}: {item.userName || t("unknown")}</Text>
-          <Text>{t("phone")}: {item.userPhone || t("unknown")}</Text>
-
-          <Text>{t("district")}: {getDistrictLabel(item.district)}</Text>
-          <Text>{t("upazilla")}: {getUpazilaLabel(item.district, item.upazilla)}</Text>
-
-          <Text>{t("land_size")}: {isBn ? toBanglaNumber(item.landSize || 0) : (item.landSize || 0)}</Text>
-          <Text>{t("tillage_number")}: {isBn ? toBanglaNumber(item.tillageAmount || 0) : (item.tillageAmount || 0)}</Text>
+          <Text>{t("farmer_name")}: {item.userName}</Text>
+          <Text>{t("phone")}: {item.userPhone}</Text>
+          <Text>{t("address")}: {item.address}</Text>
+          
+          <Text>{t("land_size")}: {isBn ? toBanglaNumber(item.landSize) : item.landSize}</Text>
+          <Text>{t("tillage_number")}: {isBn ? toBanglaNumber(item.tillageAmount) : item.tillageAmount}</Text>
           <Text>{t("charge_type")}: {item.chargeType === "per_decimal" ? t("per_decimal") : t("per_bigha")}</Text>
           <Text>{t("total_taka")}: {isBn ? toBanglaNumber(totalCharge.toFixed(2)) : totalCharge.toFixed(2)}</Text>
-
-          <Text>{t("dates")}: {item.dates?.length ? item.dates.join(", ") : t("no_dates")}</Text>
-          <Text>{t("time_slots")}: {item.slots?.length ? formatSlots(item.slots) : t("no_slots")}</Text>
+          <Text>{t("dates")}: {item.dates?.join(", ")}</Text>
+          <Text>{t("time_slots")}: {formatSlots(item.slots)}</Text>
           <Text>{t("total_hours")}: {isBn ? toBanglaNumber(totalHours) : totalHours}</Text>
 
           <View style={styles.buttonRow}>
@@ -207,9 +180,7 @@ export default function ProviderBookingRequests() {
   );
 }
 
-// ---------------------------
-// Styles
-// ---------------------------
+// ---------------- Styles ----------------
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
@@ -217,28 +188,28 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
-    elevation: 3
+    elevation: 3,
   },
   image: {
     width: 80,
     height: 80,
     resizeMode: "contain",
-    marginRight: 10
+    marginRight: 10,
   },
   info: {
-    flex: 1
+    flex: 1,
   },
   title: {
     fontSize: 16,
     fontWeight: "700",
-    marginBottom: 5
+    marginBottom: 5,
   },
   buttonRow: {
     flexDirection: "row",
-    marginTop: 8
+    marginTop: 8,
   },
   center: {
     alignItems: "center",
-    marginTop: 50
-  }
+    marginTop: 50,
+  },
 });
