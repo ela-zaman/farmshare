@@ -75,7 +75,7 @@
    "charge_per_decimal": "Charge Per Decimal",
    "charge_per_bigha": "Charge Per Bigha",
    "hour": "Hour",
-   "unit_of_charge_type": "",
+   "unit_of_charge_type": "Charge Type",
   "login_to_app": "Login to the App",
   "open_new_account": "Open a new account",
   "select_role": "Select Your Role",

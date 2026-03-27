@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import ProviderDashboard from "../screens/provider/ProviderDashboard";
 import InventoryScreen from "../screens/provider/InventoryScreen";
 import ProfileScreen from "../screens/common/ProfileScreen";
-
+import ProviderBookingRequests from "../screens/provider/ProviderBookingRequests";
 import AddMachineScreen from "../screens/provider/AddMachineScreen";
 import ProviderNotificationScreen from "../screens/provider/ProviderNotificationScreen";
 import ProviderBookingScreen from "../screens/provider/ProviderBookingScreen";
@@ -21,6 +21,7 @@ import ProviderEditMachine from "../screens/provider/ProviderEditMachine";
 import ProviderProfileScreen from "../screens/provider/ProviderProfileScreen";
 
 import { logoutUser } from "../firebase/authService";
+import MachineStatus from "../screens/provider/MachineStatus";
 
 
 const Tab = createBottomTabNavigator();
@@ -37,10 +38,12 @@ function HomeStack() {
       <Stack.Screen name="ProviderBookings" component={ProviderBookingScreen} />
       <Stack.Screen name="ProviderCurrentStatus" component={ProviderCurrentStatus} />
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
+      <Stack.Screen name="ProviderBookingRequests" component={ProviderBookingRequests} />
 
       {/* ✅ Shared Screens */}
       <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
       <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
+      <Stack.Screen name="MachineStatus" component={MachineStatus} />
     </Stack.Navigator>
   );
 }

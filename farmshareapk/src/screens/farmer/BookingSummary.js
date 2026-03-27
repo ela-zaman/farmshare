@@ -24,6 +24,7 @@ export default function BookingSummary({ route, navigation }) {
     slots, // pass full slots array from BookingDetails
     tillageAmount,
     landSize,
+    landAddress,
     chargeType
   } = route.params;
 
@@ -100,6 +101,7 @@ export default function BookingSummary({ route, navigation }) {
         userPhone: userInfo.phone,
         tillageAmount,
         landSize,
+        landAddress,
         chargeType,
         chargePerDecimal,
         chargePerBigha,
@@ -139,6 +141,7 @@ export default function BookingSummary({ route, navigation }) {
 
         <Text>{t("total_time")}: {isBn ? toBanglaNumber(totalHours) : totalHours} {t("hours")}</Text>
         <Text>{t("land_size")}: {isBn ? toBanglaNumber(landSize) : landSize}</Text>
+        <Text>{t("land_address")}: {landAddress}</Text>
         <Text>{t("tillage_number")}: {isBn ? toBanglaNumber(tillageAmount) : tillageAmount}</Text>
         <Text>{t("charge_type")}: {chargeType === "per_decimal" ? t("per_decimal") : t("per_bigha")}</Text>
         <Text style={styles.total}>

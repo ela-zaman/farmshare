@@ -282,6 +282,7 @@ export default function MachineStatus({ route }) {
                 <Text style={styles.modalTitle}>{t("booking_info")}</Text>
                 <Text>{t("farmer_name")}: {selectedBooking.userName}</Text>
                 <Text>{t("phone")}: {selectedBooking.userPhone}</Text>
+                <Text>{t("land_address")}: {selectedBooking.landAddress}</Text>
                 <Text>{t("land_size")}: {toBanglaNumber(selectedBooking.landSize)}</Text>
                 <Text>{t("tillage_number")}: {toBanglaNumber(selectedBooking.tillageAmount)}</Text>
                 <Text>{t("charge_type")}: {t(selectedBooking.chargeType)}</Text>

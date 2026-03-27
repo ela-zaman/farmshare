@@ -157,6 +157,7 @@ export default function BookingDetails({ route, navigation }) {
   const [slots] = useState(generateSlots());
   const [tillageAmount, setTillageAmount] = useState("");
   const [landSize, setLandSize] = useState("");
+  const [landAddress, setLandAddress] = useState("");
   const [selectedChargeType, setSelectedChargeType] = useState("per_decimal"); // ✅
 
   const isBn = i18n.language === "bn";
@@ -253,7 +254,7 @@ export default function BookingDetails({ route, navigation }) {
   // ---------------- Updated handleBooking ----------------
   const handleBooking = () => {
     if (!user) return Alert.alert(t("error"), t("login_required"));
-    if (!tillageAmount || !landSize) return Alert.alert(t("error"), t("fill_all_fields"));
+    if (!tillageAmount || !landSize || !landAddress) return Alert.alert(t("error"), t("fill_all_fields"));
     if (!selectedDate || !selectedSlots.length) return Alert.alert(t("error"), t("select_time"));
 
     // Navigate to BookingSummary
@@ -265,6 +266,7 @@ export default function BookingDetails({ route, navigation }) {
       slots,
       tillageAmount: parseFloat(tillageAmount),
       landSize: parseFloat(landSize),
+      landAddress,
       chargeType: selectedChargeType
     });
   };
@@ -306,6 +308,14 @@ export default function BookingDetails({ route, navigation }) {
       <TextInput style={styles.input} value={tillageAmount} onChangeText={setTillageAmount} keyboardType="numeric" placeholder={t("enter_amount")}/>
       <Text style={styles.label}>{t("land_size")}</Text>
       <TextInput style={styles.input} value={landSize} onChangeText={setLandSize} keyboardType="numeric" placeholder={t("enter_land_size")}/>
+      {/* Address */}
+<Text style={styles.label}>{t("land_address")}</Text>
+<TextInput
+  style={styles.input}
+  value={landAddress}
+  onChangeText={setLandAddress}
+  placeholder={t("enter_address")}
+/>
 
       <Text style={styles.label}>{t("unit_of_charge_type")}</Text>
       <View style={styles.picker}>
