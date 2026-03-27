@@ -73,7 +73,14 @@
    "enter_amount":"Enter Amount",
    "land_size":"Land Size",
    "charge_per_decimal": "Charge Per Decimal",
-   "charge_per_bigha": "Charge Per Bigha"
+   "charge_per_bigha": "Charge Per Bigha",
+   "hour": "Hour",
+   "unit_of_charge_type": "",
+  "login_to_app": "Login to the App",
+  "open_new_account": "Open a new account",
+  "select_role": "Select Your Role",
+  "farmer": "Farmer",
+  "register_as": "Register As:"
   
  
 

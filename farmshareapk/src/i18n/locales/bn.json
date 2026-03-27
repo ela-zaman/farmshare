@@ -71,7 +71,14 @@
   "enter_amount":"পরিমান লিখুন",
   "land_size":"জমির পরিমান",
   "charge_per_decimal": "প্রতি শতাংশের মূল্য",
-  "charge_per_bigha": "প্রতি বিঘার মূল্য"
+  "charge_per_bigha": "প্রতি বিঘার মূল্য",
+  "hour": "ঘণ্টা",
+  "login_to_app": "অ্যাপ এ লগইন করুন",
+  "open_new_account": "নতুন অ্যাকাউন্ট খুলুন",
+  "select_role": "আপনার পরিচয় নির্বাচন করুন",
+  "farmer": "কৃষক",
+  "register_as": "রেজিস্ট্রেশান করুন:"
+
   
 
 }

@@ -14,7 +14,7 @@ export default function SplashScreen({ navigation }) {
 
   return (
     <ImageBackground
-      source={require("../../../assets/images/backgroun.jpeg")}
+      source={require("../../../assets/images/background5.png")}
       style={styles.container}
       resizeMode="cover"  // Ensures background fills the screen
     >
