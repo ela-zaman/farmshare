@@ -10,7 +10,7 @@ import RoleSelectionScreen from "../screens/auth/RoleSelectionScreen";
 // Farmer Screens
 import FarmerDashboard from "../screens/farmer/FarmerDashboard";
 import SearchScreen from "../screens/farmer/SearchScreen";
-import MyBookingScreen from "../screens/farmer/MyBookingScreen";
+
 
 // Provider Screens
 import ProviderTabNavigator from "../navigation/ProviderTabNavigator";
@@ -28,6 +28,8 @@ import FarmerNotifications from "../screens/farmer/FarmerNotifications";
 import BookingSummary from "../screens/farmer/BookingSummary";
 //import ProviderMachineStatus from "../screens/provider/ProviderMachineStatus";
 import MachineStatus from "../screens/provider/MachineStatus";
+import MyBookingScreen from "../screens/farmer/MyBookingScreen";
+import BookedMachine from "../screens/farmer/BookedMachine";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -79,6 +81,9 @@ export default function AppNavigator() {
    <Stack.Screen name="FarmerNotifications" component={FarmerNotifications} />
    <Stack.Screen name="BookingSummary" component={BookingSummary} />
    <Stack.Screen name="MachineStatus" component={MachineStatus} />
+   <Stack.Screen name="MyBookingScreen" component={MyBookingScreen} />
+   <Stack.Screen name="BookedMachine" component={BookedMachine} />
+
   
     </Stack.Navigator>
   );

@@ -78,14 +78,14 @@ export default function FarmerDashboard({ navigation }) {
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("Notifications")}
+          onPress={() => navigation.navigate("MyBookingScreen")}
         >
           <Image
             source={require("../../../assets/images/Dashboard/contact.png")}
             style={styles.icon}
             resizeMode="contain"
           />
-          <Text style={styles.label}>{t("notifications")}</Text>
+          <Text style={styles.label}>{t("my_booking")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

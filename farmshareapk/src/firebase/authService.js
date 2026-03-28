@@ -53,3 +53,4 @@ export const logoutUser = async () => {
     throw error;
   }
 };
+export { auth, db };
