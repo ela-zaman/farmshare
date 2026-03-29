@@ -30,6 +30,8 @@ import BookingSummary from "../screens/farmer/BookingSummary";
 import MachineStatus from "../screens/provider/MachineStatus";
 import MyBookingScreen from "../screens/farmer/MyBookingScreen";
 import BookedMachine from "../screens/farmer/BookedMachine";
+import FarmerMyContact from "../screens/farmer/FarmerMyContact"
+import FarmerBottomTabNavigator from "./FarmerBottomTabNavigator";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -57,7 +59,9 @@ export default function AppNavigator() {
       <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
 
       {/* Farmer */}
-      <Stack.Screen name="FarmerDashboard" component={FarmerDashboard} />
+      <Stack.Screen name="FarmerDashboard" component={FarmerBottomTabNavigator} />
+
+     
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Booking" component={MyBookingScreen} />
 
@@ -83,6 +87,8 @@ export default function AppNavigator() {
    <Stack.Screen name="MachineStatus" component={MachineStatus} />
    <Stack.Screen name="MyBookingScreen" component={MyBookingScreen} />
    <Stack.Screen name="BookedMachine" component={BookedMachine} />
+   <Stack.Screen name="FarmerMyContact" component={FarmerMyContact} />
+  
 
   
     </Stack.Navigator>

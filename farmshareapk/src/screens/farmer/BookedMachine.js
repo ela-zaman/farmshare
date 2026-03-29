@@ -6,10 +6,20 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  TouchableOpacity,
+  Linking,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../firebase/authService";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
+import { db, auth } from "../../firebase/authService";
 
 export default function BookedMachine({ route }) {
   const { t } = useTranslation();
@@ -18,34 +28,19 @@ export default function BookedMachine({ route }) {
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  const safeToString = (value) => {
-    try {
-      if (value === null || value === undefined) return t("no_data");
-      if (typeof value === "object") return JSON.stringify(value);
-      return String(value);
-    } catch {
-      return t("no_data");
-    }
-  };
+  const safe = (v) => (!v ? t("no_data") : String(v));
 
   const isPastBooking = (dateValue) => {
-    try {
-      if (!dateValue) return false;
+    if (!dateValue) return false;
 
-      const bookingDate = new Date(dateValue);
-      if (isNaN(bookingDate.getTime())) return false;
+    const bookingDate = new Date(dateValue);
+    const today = new Date();
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    bookingDate.setHours(0, 0, 0, 0);
 
-      bookingDate.setHours(0, 0, 0, 0);
-
-      return bookingDate < today;
-    } catch {
-      return false;
-    }
+    return bookingDate < today;
   };
 
   useEffect(() => {
@@ -54,8 +49,6 @@ export default function BookedMachine({ route }) {
 
   const fetchBookings = async () => {
     try {
-      setError(null);
-
       const q = query(
         collection(db, "bookings"),
         where("machineType", "==", machineTypeParam),
@@ -64,37 +57,87 @@ export default function BookedMachine({ route }) {
 
       const snapshot = await getDocs(q);
 
-      const list = snapshot.docs.map((doc) => {
-        const data = doc.data();
+      const list = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data();
 
-        return {
-          id: doc.id,
-          providerName: data.userName || "Unknown User",
-          providerPhone: data.userPhone || "",
-          machineType: data.machineType || "",
-          address: data.upazilla || data.address || "",
-          landSize: data.landSize || "",
-          tillageAmount: data.tillageAmount || data.tillageNumber || "",
-          chargeType: data.chargeType || "",
-          date: data.dates && data.dates[0] ? data.dates[0] : "",
-          timeSlots: data.slots ? data.slots.join(", ") : "",
-          totalTaka: data.totalCharge || 0,
-        };
+          let providerName = "Unknown";
+          let providerPhone = "N/A";
+          let providerAddress = "N/A";
+
+          if (data.providerId) {
+            const userSnap = await getDoc(doc(db, "users", data.providerId));
+            if (userSnap.exists()) {
+              const u = userSnap.data();
+              providerName = u.name || "Unknown";
+              providerPhone = u.phone || "N/A";
+              providerAddress = u.address || "N/A";
+            }
+          }
+
+          return {
+            id: docSnap.id,
+            providerName,
+            providerPhone,
+            providerAddress,
+            machineType: data.machineType,
+            landSize: data.landSize,
+            tillageAmount: data.tillageAmount,
+            chargeType: data.chargeType,
+            date: data.dates?.[0] || "",
+            timeSlots: data.slots?.join(", ") || "",
+            totalTaka: data.totalCharge || 0,
+          };
+        })
+      );
+
+      // ✅ SORT: upcoming/today first, expired last
+      const sortedList = list.sort((a, b) => {
+        const aExpired = isPastBooking(a.date);
+        const bExpired = isPastBooking(b.date);
+
+        if (aExpired === bExpired) return 0;
+        if (aExpired && !bExpired) return 1;
+        return -1;
       });
 
-      setBookings(list);
+      setBookings(sortedList);
       setLoading(false);
     } catch (err) {
-      console.error(err);
-      setError(err.message);
+      console.log(err);
       setLoading(false);
     }
   };
 
-  const getImage = (type) => {
-    const safeType = type ? String(type).toLowerCase().trim() : "";
+  const handleCall = (phone) => {
+    if (!phone || phone === "N/A") return;
+    Linking.openURL(`tel:${phone}`);
+  };
 
-    switch (safeType) {
+  const handleAddContact = async (item) => {
+    try {
+      const uid = auth.currentUser.uid;
+
+      await setDoc(doc(db, "contacts", `${uid}_${item.id}`), {
+        userId: uid,
+        name: item.providerName,
+        phone: item.providerPhone,
+        address: item.providerAddress,
+        machineType: item.machineType,
+        createdAt: new Date().toISOString(),
+      });
+
+      alert(t("contact_saved") || "Contact saved!");
+    } catch (err) {
+      console.log(err);
+      alert("Error saving contact");
+    }
+  };
+
+  const getImage = (type) => {
+    const t = type?.toLowerCase();
+
+    switch (t) {
       case "tractor":
         return require("../../../assets/images/Machines/tractor.png");
       case "powertiller":
@@ -116,100 +159,69 @@ export default function BookedMachine({ route }) {
   };
 
   const renderItem = ({ item }) => {
-    let formattedDate = t("no_data");
-
-    if (item.date) {
-      const d = new Date(item.date);
-      if (!isNaN(d.getTime())) {
-        formattedDate = d.toLocaleDateString();
-      }
-    }
-
-    const isPast = isPastBooking(item.date);
-
-    const backgroundColor = isPast
-      ? "rgba(255, 0, 0, 0.2)"
-      : "rgba(0, 128, 0, 0.2)";
+    const expired = isPastBooking(item.date);
 
     return (
-      <View style={[styles.card, { backgroundColor }]}>
-        <View style={styles.imgContainer}>
-          <Image source={getImage(item.machineType)} style={styles.machineImg} />
-        </View>
+      <View
+        style={[
+          styles.card,
+          expired ? styles.redCard : styles.greenCard,
+        ]}
+      >
+        <Image source={getImage(item.machineType)} style={styles.image} />
 
         <View style={styles.content}>
-          {/* ✅ Farmer Name */}
-          <Text style={styles.providerTitle}>
-            {t("farmer_name")}: {safeToString(item.providerName)}
+          <Text style={styles.title}>{t("service_provider")} : {safe(item.providerName)}</Text>
+
+          <Text style={styles.phone}>
+            📞 {t("phone")} : {safe(item.providerPhone)}
           </Text>
 
-          {/* Machine Type */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("machine_type")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.machineType)}
-            </Text>
-          </View>
+          <Text style={styles.text}>
+            {t("machine_type")}: {t(item.machineType)}
+          </Text>
 
-          {/* Phone */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("phone")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.providerPhone)}
-            </Text>
-          </View>
+          <Text style={styles.text}>
+            {t("land_size")}: {safe(item.landSize)}
+          </Text>
 
-          {/* Address */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("address")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.address)}
-            </Text>
-          </View>
+          <Text style={styles.text}>
+            {t("tillage_number")}: {safe(item.tillageAmount)}
+          </Text>
 
-          {/* Land Size */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("land_size")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.landSize)}
-            </Text>
-          </View>
+          <Text style={styles.text}>
+            {t("type")}: {t(item.chargeType)}
+          </Text>
 
-          {/* Tillage Amount */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("tillage_amount")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.tillageAmount)}
-            </Text>
-          </View>
+          <Text style={styles.text}>
+            {t("address")}: {safe(item.providerAddress)}
+          </Text>
 
-          {/* Charge Type */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("charge_type")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.chargeType)}
-            </Text>
-          </View>
+          <Text style={styles.text}>
+            {t("time_slots")}: {safe(item.timeSlots)}
+          </Text>
 
-          {/* Date */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("date")}:</Text>
-            <Text style={styles.detailValue}>{formattedDate}</Text>
-          </View>
+          <Text style={styles.total}>
+            {t("total_charge")}: ৳ {item.totalTaka}
+          </Text>
+        </View>
 
-          {/* Time */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("time_slots")}:</Text>
-            <Text style={styles.detailValue}>
-              {safeToString(item.timeSlots)}
-            </Text>
-          </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => handleCall(item.providerPhone)}
+          >
+            <Text style={styles.icon}>📞</Text>
+            <Text style={styles.btnText}>{t("call")}</Text>
+          </TouchableOpacity>
 
-          {/* Total */}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>{t("total_charge")}:</Text>
-            <Text style={styles.detailValue}>৳{item.totalTaka}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => handleAddContact(item)}
+          >
+            <Text style={styles.icon}>➕</Text>
+            <Text style={styles.btnText}>{t("add_contact")}</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -217,91 +229,99 @@ export default function BookedMachine({ route }) {
 
   if (loading) {
     return (
-      <View style={styles.centerBox}>
-        <ActivityIndicator size="large" color="#2E7D32" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.centerBox}>
-        <Text>Error: {error}</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="green" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={bookings}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <Text style={styles.emptyMsg}>{t("no_bookings")}</Text>
-        }
-      />
-    </View>
+    <FlatList
+      data={bookings}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      contentContainerStyle={{ padding: 15 }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  centerBox: {
+  center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+
   card: {
     borderRadius: 20,
-    padding: 20,
-    marginTop: 40,
+    padding: 15,
     marginBottom: 20,
-    borderWidth: 1,
+    alignItems: "center",
+    elevation: 5,
   },
-  imgContainer: {
-    position: "absolute",
-    top: -40,
-    alignSelf: "center",
-    backgroundColor: "#FFF",
-    borderRadius: 40,
-    padding: 4,
+
+  greenCard: {
+    backgroundColor: "rgba(0,150,0,0.10)",
   },
-  machineImg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+
+  redCard: {
+    backgroundColor: "rgba(255,0,0,0.10)",
   },
+
+  image: {
+    width: 110,
+    height: 110,
+    resizeMode: "contain",
+    marginBottom: 10,
+  },
+
   content: {
-    marginTop: 40,
+    alignItems: "center",
   },
-  providerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
+
+  title: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+
+  phone: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+
+  text: {
+    fontSize: 13,
     textAlign: "center",
-    marginBottom: 12,
+    marginVertical: 2,
   },
-  detailRow: {
+
+  total: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 8,
+    color: "green",
+  },
+
+  buttonRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 5,
+    marginTop: 15,
+    gap: 30,
   },
-  detailLabel: {
-    fontWeight: "700",
-    color: "#666",
+
+  btn: {
+    alignItems: "center",
   },
-  detailValue: {
-    textAlign: "right",
-    flex: 1,
-    marginLeft: 10,
+
+  icon: {
+    fontSize: 22,
   },
-  emptyMsg: {
-    textAlign: "center",
-    marginTop: 100,
-    color: "#999",
+
+  btnText: {
+    fontSize: 12,
+    marginTop: 3,
+    fontWeight: "600",
   },
 });

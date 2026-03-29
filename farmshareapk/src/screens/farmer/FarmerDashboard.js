@@ -81,7 +81,7 @@ export default function FarmerDashboard({ navigation }) {
           onPress={() => navigation.navigate("MyBookingScreen")}
         >
           <Image
-            source={require("../../../assets/images/Dashboard/contact.png")}
+            source={require("../../../assets/images/bookings.png")}
             style={styles.icon}
             resizeMode="contain"
           />
@@ -90,14 +90,14 @@ export default function FarmerDashboard({ navigation }) {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("Profile")}
+          onPress={() => navigation.navigate("FarmerMyContact")}
         >
           <Image
             source={require("../../../assets/images/Dashboard/contact.png")}
             style={styles.icon}
             resizeMode="contain"
           />
-          <Text style={styles.label}>{t("profile")}</Text>
+          <Text style={styles.label}>{t("my_contact")}</Text>
         </TouchableOpacity>
       </View>
 
