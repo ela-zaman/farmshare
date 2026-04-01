@@ -4,8 +4,10 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from "react-native";
+
 import { db, auth } from "../../firebase/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
@@ -22,7 +24,7 @@ export default function ProviderProfileScreen() {
         const user = auth.currentUser;
         if (!user) return;
 
-        const userDoc = doc(db, "users", user.uid); // assuming you store user info in 'users' collection
+        const userDoc = doc(db, "users", user.uid);
         const docSnap = await getDoc(userDoc);
 
         if (docSnap.exists()) {
@@ -58,6 +60,19 @@ export default function ProviderProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      
+      {/* ✅ PROFILE IMAGE */}
+      <View style={styles.imageWrapper}>
+        {userData.photo ? (
+          <Image
+            source={{ uri: userData.photo }}
+            style={styles.profileImage}
+          />
+        ) : (
+          <Ionicons name="person-circle" size={120} color="#ccc" />
+        )}
+      </View>
+
       {/* Name */}
       <View style={styles.item}>
         <Ionicons name="person-circle-outline" size={28} color="#4CAF50" />
@@ -67,7 +82,7 @@ export default function ProviderProfileScreen() {
         </View>
       </View>
 
-      {/* Phone Number */}
+      {/* Phone */}
       <View style={styles.item}>
         <Ionicons name="call-outline" size={28} color="#4CAF50" />
         <View style={styles.textContainer}>
@@ -111,6 +126,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center"
+  },
+
+  imageWrapper: {
+    alignItems: "center",
+    marginBottom: 20
+  },
+
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: "#4CAF50"
   },
 
   item: {

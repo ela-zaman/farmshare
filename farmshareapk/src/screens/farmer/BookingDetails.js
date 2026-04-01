@@ -285,7 +285,7 @@ export default function BookingDetails({ route, navigation }) {
 
   // ---------------- Render ----------------
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:80}}>
+    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:200}}>
       {/* TOP CARD */}
       <View style={styles.card}>
         <View style={styles.cardContent}>

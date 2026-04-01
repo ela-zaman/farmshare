@@ -110,17 +110,18 @@ export default function ProviderMachineDetails() {
       <View style={styles.infoRow}>
         <FontAwesome5 name="seedling" size={20} color="#555" style={styles.icon} />
         <Text style={styles.infoText}>
-          {t("type")}: {getTillageTypeLabel(machine.tillageType)}
+          {t("charge_per_bigha")}: {machine.chargePerBigha}
+        </Text>
+      </View>
+       <View style={styles.infoRow}>
+        <FontAwesome5 name="seedling" size={20} color="#555" style={styles.icon} />
+        <Text style={styles.infoText}>
+          {t("charge_per_decimal")}: {machine.chargePerDecimal}
         </Text>
       </View>
 
       {/* 🔥 Charge ONLY (removed charge type) */}
-      <View style={styles.infoRow}>
-        <MaterialIcons name="attach-money" size={20} color="#555" style={styles.icon} />
-        <Text style={styles.infoText}>
-          {t("charge")}: {machine.tillageCharge}
-        </Text>
-      </View>
+    
 
       {/* Village */}
       <View style={styles.infoRow}>

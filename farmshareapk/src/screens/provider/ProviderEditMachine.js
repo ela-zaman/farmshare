@@ -23,7 +23,8 @@ export default function EditMachineScreen() {
   const [name, setName] = useState(machine.name);
   const [machineType, setMachineType] = useState(machine.machineType);
   const [tillageType, setTillageType] = useState(machine.tillageType);
-  const [tillageCharge, setTillageCharge] = useState(machine.tillageCharge);
+  const [chargePerBigha, setChargePerBigha] = useState(machine.chargePerBigha);
+  const [chargePerDecimal, setChargePerDecimal] = useState(machine.chargePerDecimal);
   const [village, setVillage] = useState(machine.village);
 
   const handleUpdate = async () => {
@@ -33,8 +34,8 @@ export default function EditMachineScreen() {
       await updateDoc(docRef, {
         name,
         machineType,
-        tillageType,
-        tillageCharge,
+        chargePerBigha,
+        chargePerDecimal,
         village,
       });
 
@@ -71,19 +72,19 @@ export default function EditMachineScreen() {
         <Picker.Item label="Sprayer" value="Sprayer" />
       </Picker>
 
-      <Text style={styles.label}>Tillage Type</Text>
-      <Picker
-        selectedValue={tillageType}
-        onValueChange={setTillageType}
-      >
-        <Picker.Item label="Per Decimal" value="Per Decimal" />
-        <Picker.Item label="Per Bigha" value="Per Bigha" />
-      </Picker>
+     
 
-      <Text style={styles.label}>Tillage Charge</Text>
+      <Text style={styles.label}>Tillage Charge Per Bigha</Text>
       <TextInput
-        value={tillageCharge}
-        onChangeText={setTillageCharge}
+        value={chargePerBigha}
+        onChangeText={setChargePerBigha}
+        keyboardType="numeric"
+        style={styles.input}
+      />
+<Text style={styles.label}>Tillage Charge Per Decimal</Text>
+      <TextInput
+        value={chargePerDecimal}
+        onChangeText={setChargePerDecimal}
         keyboardType="numeric"
         style={styles.input}
       />

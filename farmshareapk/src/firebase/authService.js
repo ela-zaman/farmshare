@@ -1,50 +1,96 @@
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut
+} from "firebase/auth";
+
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
+} from "firebase/firestore";
+
 import { firebaseApp } from "./firebaseConfig";
 
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 
-// Register user
-export const registerUser = async ({ name, phone, address, password, role }) => {
+
+// ================= REGISTER USER =================
+export const registerUser = async ({
+  name,
+  phone,
+  address,
+  password,
+  role,
+  photo // 🆕 added photo
+}) => {
   try {
+    // Convert phone → fake email (your system)
     const fakeEmail = `${phone}@example.com`;
-    const userCredential = await createUserWithEmailAndPassword(auth, fakeEmail, password);
+
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      fakeEmail,
+      password
+    );
+
     const user = userCredential.user;
 
+    // Save user data in Firestore
     await setDoc(doc(db, "users", user.uid), {
       name,
       phone,
       address,
       role,
-      createdAt: new Date().toISOString(),
+      photo: photo || null, // 🆕 store image URL
+      createdAt: new Date().toISOString()
     });
 
     return user;
+
   } catch (error) {
     console.error("Registration error:", error);
     throw error;
   }
 };
 
-// Login user
+
+// ================= LOGIN USER =================
 export const loginUser = async ({ phone, password }) => {
   try {
     const fakeEmail = `${phone}@example.com`;
-    const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, password);
+
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      fakeEmail,
+      password
+    );
+
     const user = userCredential.user;
 
-    // Fetch user info including role
+    // Fetch user data from Firestore
     const docSnap = await getDoc(doc(db, "users", user.uid));
-    if (!docSnap.exists()) throw new Error("User data not found.");
-    return { uid: user.uid, ...docSnap.data() };
+
+    if (!docSnap.exists()) {
+      throw new Error("User data not found.");
+    }
+
+    return {
+      uid: user.uid,
+      ...docSnap.data() // includes photo now
+    };
+
   } catch (error) {
     console.error("Login error:", error);
     throw error;
   }
 };
 
-// Logout user
+
+// ================= LOGOUT =================
 export const logoutUser = async () => {
   try {
     await signOut(auth);
@@ -53,4 +99,7 @@ export const logoutUser = async () => {
     throw error;
   }
 };
+
+
+// ================= EXPORTS =================
 export { auth, db };

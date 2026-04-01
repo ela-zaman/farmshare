@@ -7,7 +7,8 @@ import {
   Image,
   Dimensions,
   ScrollView,
-  Alert
+  Alert,
+  ImageBackground
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { logoutUser } from "../../firebase/authService";
@@ -27,108 +28,118 @@ export default function FarmerDashboard({ navigation }) {
     }
   };
 
-  // Language toggle function
   const toggleLanguage = () => {
     const newLang = i18n.language === "en" ? "bn" : "en";
     i18n.changeLanguage(newLang);
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ alignItems: "center" }}>
+    <ImageBackground
+      source={require("../../../assets/images/background6.png")} // ✅ your background image
+      style={styles.background}
+      resizeMode="cover"
+    >
+      {/* OPTIONAL OVERLAY (improves readability) */}
+      <View style={styles.overlay}>
+        <ScrollView
+          contentContainerStyle={{ alignItems: "center", paddingBottom: 30 }}
+        >
 
-      {/* HEADER WITH LANGUAGE SWITCH */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{t("farmer_dashboard")}</Text>
+          {/* HEADER */}
+          <View style={styles.header}>
+            <Text style={styles.title}>{t("farmer_dashboard")}</Text>
 
-        <TouchableOpacity style={styles.langButton} onPress={toggleLanguage}>
-          <Text style={styles.langText}>
-            {i18n.language === "en" ? "BN" : "EN"}
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.langButton} onPress={toggleLanguage}>
+              <Text style={styles.langText}>
+                {i18n.language === "en" ? "BN" : "EN"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ROW 1 */}
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate("SearchScreen")}
+            >
+              <Image
+                source={require("../../../assets/images/Dashboard/search.png")}
+                style={styles.icon}
+              />
+              <Text style={styles.label}>{t("search")}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate("FarmerNotifications")}
+            >
+              <Image
+                source={require("../../../assets/images/Dashboard/contact.png")}
+                style={styles.icon}
+              />
+              <Text style={styles.label}>{t("new_order")}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ROW 2 */}
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate("MyBookingScreen")}
+            >
+              <Image
+                source={require("../../../assets/images/bookings.png")}
+                style={styles.icon}
+              />
+              <Text style={styles.label}>{t("my_booking")}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate("FarmerMyContact")}
+            >
+              <Image
+                source={require("../../../assets/images/Dashboard/contact.png")}
+                style={styles.icon}
+              />
+              <Text style={styles.label}>{t("my_contact")}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* LOGOUT */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>{t("logout")}</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
       </View>
-
-      {/* GRID ROW 1 */}
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("SearchScreen")}
-        >
-          <Image
-            source={require("../../../assets/images/Dashboard/search.png")}
-            style={styles.icon}
-            resizeMode="contain"
-          />
-          <Text style={styles.label}>{t("search")}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("FarmerNotifications")}
-        >
-          <Image
-            source={require("../../../assets/images/Dashboard/contact.png")}
-            style={styles.icon}
-            resizeMode="contain"
-          />
-          <Text style={styles.label}>{t("new_order")}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* GRID ROW 2 */}
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("MyBookingScreen")}
-        >
-          <Image
-            source={require("../../../assets/images/bookings.png")}
-            style={styles.icon}
-            resizeMode="contain"
-          />
-          <Text style={styles.label}>{t("my_booking")}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("FarmerMyContact")}
-        >
-          <Image
-            source={require("../../../assets/images/Dashboard/contact.png")}
-            style={styles.icon}
-            resizeMode="contain"
-          />
-          <Text style={styles.label}>{t("my_contact")}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* LOGOUT BUTTON */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>{t("logout")}</Text>
-      </TouchableOpacity>
-
-    </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingTop: 30
   },
 
-  /* HEADER */
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.15)", // 🔥 soft glass effect
+  },
+
   header: {
     width: "90%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20
+    marginTop: 30,
+    marginBottom: 30
   },
 
   title: {
     fontSize: 24,
-    fontWeight: "700"
+    fontWeight: "700",
+    color: "#000"
   },
 
   langButton: {
@@ -143,28 +154,38 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
 
-  /* GRID */
+  /* ROW */
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
-    width: "90%"
+    width: "90%",
+
+    // ✅ vertical spacing between rows
+    marginBottom: 25,
+      
+
+  // ✅ perfect spacing between columns
+  columnGap: 15,
   },
 
+  /* BUTTON */
   button: {
     width: buttonSize,
     height: buttonSize,
-    backgroundColor: "#f2f2f2",
-    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.85)", // 🔥 glass style
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
     padding: 10,
 
+    // ✅ vertical spacing between buttons
+    marginVertical: 5,
+
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 3
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 5
   },
 
   icon: {
@@ -175,13 +196,12 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
     textAlign: "center"
   },
 
-  /* LOGOUT */
   logoutButton: {
-    marginTop: 30,
+    marginTop: 40,
     backgroundColor: "#ff4d4d",
     paddingVertical: 12,
     paddingHorizontal: 40,

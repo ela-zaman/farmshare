@@ -16,6 +16,8 @@ import MyBookingScreen from "../screens/farmer/MyBookingScreen";
 import { logoutUser } from "../firebase/authService";
 import SearchScreen from "../screens/farmer/SearchScreen";
 import BookedMachine from "../screens/farmer/BookedMachine";
+import SearchResult from "../screens/farmer/SearchResult";
+import BookingDetails from "../screens/farmer/BookingDetails";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -29,6 +31,9 @@ function HomeStack() {
       <Stack.Screen name="SearchScreen" component={SearchScreen} />
       <Stack.Screen name="MyBookingScreen" component={MyBookingScreen} />
       <Stack.Screen name="BookedMachine" component={BookedMachine} />
+      <Stack.Screen name="SearchResult" component={SearchResult} />
+      <Stack.Screen name="BookingDetails" component={BookingDetails} />
+
       
     </Stack.Navigator>
   );
