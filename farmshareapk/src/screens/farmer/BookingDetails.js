@@ -163,15 +163,28 @@ export default function BookingDetails({ route, navigation }) {
   const isBn = i18n.language === "bn";
   LocaleConfig.defaultLocale = isBn ? "bn" : "en";
 
+   /* ---------- SAFETY CHECK ---------- */
+  if (!machine || !machine.id) {
+    return (
+      <View style={styles.center}>
+        <Text>Machine data not found</Text>
+      </View>
+    );
+  }
   // ---------------- Fetch Data ----------------
-  useEffect(() => {
+ useEffect(() => {
     const load = async () => {
-      setLoading(true);
-      await Promise.all([fetchUser(), fetchBookings()]);
-      setLoading(false);
+      try {
+        setLoading(true);
+        await fetchBookings();
+      } catch (e) {
+        console.log("LOAD ERROR:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
-  }, [machine?.id]);
+  }, [machine.id]);
 
   const fetchUser = async () => {
     if (!user) return;
