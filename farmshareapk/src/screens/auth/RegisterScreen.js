@@ -1,25 +1,26 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
-  TextInput,
   Text,
+  TextInput,
   StyleSheet,
-  Alert,
-  ImageBackground,
   TouchableOpacity,
-  Animated,
-  Dimensions,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  ImageBackground,
+  Animated,
+  ScrollView
 } from "react-native";
 
+import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import i18n from "i18next";
+
 import { registerUser } from "../../firebase/authService";
+import { bdLocations } from "../../data/bdLocation";
 
-const { width } = Dimensions.get("window");
-
-// 🔑 Cloudinary config
 const CLOUD_NAME = "dnkiqjunx";
 const UPLOAD_PRESET = "farm_app_upload";
 
@@ -28,120 +29,92 @@ export default function RegisterScreen({ navigation, route }) {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [district, setDistrict] = useState("");
+  const [upazila, setUpazila] = useState("");
+  const [village, setVillage] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const role = route.params?.role || "farmer";
   const floatAnim = useRef(new Animated.Value(0)).current;
 
+  const districtList = Object.keys(bdLocations || {});
+  const upazilaList = district ? (bdLocations[district]?.upazilas || []) : [];
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(floatAnim, {
-          toValue: -10,
-          duration: 1000,
-          useNativeDriver: true
-        }),
-        Animated.timing(floatAnim, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true
-        })
+        Animated.timing(floatAnim, { toValue: -8, duration: 800, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 800, useNativeDriver: true })
       ])
     ).start();
   }, []);
 
-  // 📸 Pick Image
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5
-    });
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
+  const toggleLang = () => {
+    i18n.changeLanguage(i18n.language === "en" ? "bn" : "en");
   };
 
-  // ☁️ Upload to Cloudinary
-  const uploadImageToCloudinary = async () => {
+  const pickImage = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6
+    });
+
+    if (!res.canceled) setImage(res.assets[0].uri);
+  };
+
+  const uploadImage = async () => {
     if (!image) return null;
 
-    const data = new FormData();
+    const form = new FormData();
+    form.append("file", { uri: image, name: "img.jpg", type: "image/jpeg" });
+    form.append("upload_preset", UPLOAD_PRESET);
 
-    data.append("file", {
-      uri: image,
-      type: "image/jpeg",
-      name: "profile.jpg"
-    });
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      { method: "POST", body: form }
+    );
 
-    data.append("upload_preset", UPLOAD_PRESET);
-
-    try {
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-        {
-          method: "POST",
-          body: data
-        }
-      );
-
-      const result = await res.json();
-
-      if (result.secure_url) {
-        return result.secure_url;
-      } else {
-        console.log("Cloudinary Error:", result);
-        return null;
-      }
-    } catch (error) {
-      console.log("Upload Error:", error);
-      return null;
-    }
+    const data = await res.json();
+    return data.secure_url;
   };
 
-  // 📝 Register
   const handleRegister = async () => {
-    if (!name || !phone || !address || !password) {
-      return Alert.alert(t("error"), t("fill_fields"));
-    }
+    if (!name || !phone || !district || !upazila || !village || !password || !confirmPassword)
+      return alert(t("fill_all_fields"));
 
-    if (!image) {
-      return Alert.alert(t("error"), "Please select a profile image");
-    }
+    if (password !== confirmPassword)
+      return alert(t("password_not_match"));
 
     setLoading(true);
 
     try {
-      // 🔥 Upload to Cloudinary
-      const imageUrl = await uploadImageToCloudinary();
+      const photoUrl = await uploadImage();
 
-      if (!imageUrl) {
-        setLoading(false);
-        return Alert.alert("Error", "Image upload failed");
-      }
+      await registerUser(
+        {
+          name,
+          phone,
+          role,
+          district,
+          upazila,
+          village,
+          photo: photoUrl
+        },
+        password
+      );
 
-      // 🔥 Save in Firebase
-      await registerUser({
-        name,
-        phone,
-        address,
-        password,
-        role,
-        photo: imageUrl
-      });
-
-      Alert.alert(t("success"), t("registration_success"));
+      alert(t("registration_success"));
 
       navigation.reset({
         index: 0,
         routes: [{ name: "Login" }]
       });
 
-    } catch (error) {
-      Alert.alert(t("registration_failed"), error.message);
+    } catch (err) {
+      alert(err.message);
     }
 
     setLoading(false);
@@ -150,128 +123,147 @@ export default function RegisterScreen({ navigation, route }) {
   return (
     <ImageBackground
       source={require("../../../assets/images/background6.png")}
-      style={styles.container}
-      resizeMode="cover"
+      style={{ flex: 1 }}
     >
-      <Text style={styles.title}>
-        {t("register_as")} {t(role)}
-      </Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
 
-      {/* 📸 PROFILE IMAGE */}
-      <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.profileImage} />
-        ) : (
-          <Text style={{ color: "#fff" }}>Select Photo</Text>
-        )}
-      </TouchableOpacity>
+        {/* LANGUAGE SWITCH */}
+        <TouchableOpacity style={styles.lang} onPress={toggleLang}>
+          <Text style={{ color: "#fff" }}>🌐</Text>
+        </TouchableOpacity>
 
-      <TextInput
-        style={styles.input}
-        placeholder={t("name")}
-        placeholderTextColor="blue"
-        value={name}
-        onChangeText={setName}
-      />
+        <Text style={styles.title}>
+          {t("register_as")} {t(role)}
+        </Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder={t("phone")}
-        placeholderTextColor="blue"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder={t("address")}
-        placeholderTextColor="blue"
-        value={address}
-        onChangeText={setAddress}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder={t("password")}
-        placeholderTextColor="blue"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
+        {/* IMAGE */}
+        <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
+          {image ? (
+            <Image source={{ uri: image }} style={styles.img} />
           ) : (
-            <Text style={styles.buttonText}>{t("register")}</Text>
+            <Ionicons name="camera" size={30} color="green" />
           )}
         </TouchableOpacity>
-      </Animated.View>
+
+        {/* INPUTS */}
+        <Input icon="user" value={name} onChangeText={setName} placeholder={t("name")} />
+        <Input icon="phone" value={phone} onChangeText={setPhone} placeholder={t("phone")} />
+
+        {/* DISTRICT */}
+        <PickerBox
+          selected={district}
+          setSelected={(v) => { setDistrict(v); setUpazila(""); }}
+          list={[
+            { label: t("select_district"), value: "" },
+            ...(districtList || []).map(d => ({
+              label: i18n.language === "bn" ? bdLocations[d]?.bn : d,
+              value: d
+            }))
+          ]}
+        />
+
+        {/* UPAZILA */}
+        <PickerBox
+          selected={upazila}
+          setSelected={setUpazila}
+          list={[
+            { label: t("select_upazila"), value: "" },
+            ...(upazilaList || []).map(u => ({
+              label: i18n.language === "bn" ? u?.bn : u?.en,
+              value: u?.en
+            }))
+          ]}
+        />
+
+        <Input icon="home" value={village} onChangeText={setVillage} placeholder={t("village")} />
+        <Input icon="lock" value={password} onChangeText={setPassword} placeholder={t("password")} secure />
+        <Input icon="lock" value={confirmPassword} onChangeText={setConfirmPassword} placeholder={t("confirm_password")} secure />
+
+        <TouchableOpacity style={styles.btn} onPress={handleRegister}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff" }}>{t("register")}</Text>}
+        </TouchableOpacity>
+
+      </ScrollView>
     </ImageBackground>
   );
 }
 
+/* INPUT */
+const Input = ({ icon, secure, value, onChangeText, placeholder }) => (
+  <View style={styles.inputBox}>
+    <FontAwesome name={icon} size={18} color="green" />
+    <TextInput
+      style={styles.input}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="blue"
+      secureTextEntry={secure}
+    />
+  </View>
+);
+
+/* PICKER */
+const PickerBox = ({ selected, setSelected, list }) => (
+  <View style={styles.inputBox}>
+    <MaterialIcons name="map" size={18} color="green" />
+    <Picker selectedValue={selected} style={{ flex: 1 }} onValueChange={setSelected}>
+      {(list || []).map((i, idx) => (
+        <Picker.Item key={idx} label={i.label} value={i.value} />
+      ))}
+    </Picker>
+  </View>
+);
+
+/* STYLE */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "center"
-  },
+  container: { padding: 20, paddingBottom: 120 },
 
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
     color: "#fff",
-    backgroundColor: "darkgreen",
-    paddingVertical: 10,
-    borderRadius: 8
+    textAlign: "center"
   },
 
-  imageContainer: {
+  lang: { position: "absolute", right: 15, top: 10 },
+
+  imageBox: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#fff",
     alignSelf: "center",
-    marginBottom: 20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    overflow: "hidden"
+    marginBottom: 15
   },
 
-  profileImage: {
-    width: "100%",
-    height: "100%"
+  img: { width: "100%", height: "100%", borderRadius: 50 },
+
+  inputBox: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: "center"
   },
 
   input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    marginBottom: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
+    flex: 1,
+    marginLeft: 10,
     color: "#000"
   },
 
-  button: {
-    backgroundColor: "darkgreen",
-    width: width * 0.8,
-    paddingVertical: 15,
-    borderRadius: 12,
+  btn: {
+    backgroundColor: "green",
+    padding: 15,
+    borderRadius: 10,
     alignItems: "center",
-    alignSelf: "center",
-    marginTop: 20,
-    elevation: 5
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold"
+    marginTop: 10
   }
 });

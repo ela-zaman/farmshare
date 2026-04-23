@@ -5,166 +5,308 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Image
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert
 } from "react-native";
 
+import * as ImagePicker from "expo-image-picker";
 import { db, auth } from "../../firebase/firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
+
 import { useTranslation } from "react-i18next";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import i18n from "i18next";
+
+import { bdLocations } from "../../data/bdLocation"; // ✅ correct import
+
+const CLOUD_NAME = "dnkiqjunx";
+const UPLOAD_PRESET = "farm_app_upload";
 
 export default function ProviderProfileScreen() {
   const { t } = useTranslation();
-  const [userData, setUserData] = useState(null);
+
   const [loading, setLoading] = useState(true);
+  const [edit, setEdit] = useState(false);
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [district, setDistrict] = useState("");
+  const [upazila, setUpazila] = useState("");
+  const [village, setVillage] = useState("");
+  const [photo, setPhoto] = useState(null);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const userDoc = doc(db, "users", user.uid);
-        const docSnap = await getDoc(userDoc);
-
-        if (docSnap.exists()) {
-          setUserData(docSnap.data());
-        } else {
-          console.log("No user data found!");
-        }
-      } catch (error) {
-        console.log("Error fetching user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
+    loadUser();
   }, []);
 
+  // ================= LOAD USER =================
+  const loadUser = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const snap = await getDoc(doc(db, "users", user.uid));
+
+      if (snap.exists()) {
+        const data = snap.data();
+
+        setName(data.name || "");
+        setPhone(data.phone || "");
+        setDistrict(data.district || "");
+        setUpazila(data.upazila || "");
+        setVillage(data.village || "");
+        setPhoto(data.photo || null);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+    setLoading(false);
+  };
+
+  // ================= LANGUAGE SWITCH =================
+  const toggleLang = () => {
+    const newLang = i18n.language === "en" ? "bn" : "en";
+    i18n.changeLanguage(newLang);
+  };
+
+  // ================= TRANSLATION =================
+
+  const getDistrictName = () => {
+    if (!district) return "";
+
+    const data = bdLocations[district];
+    if (!data) return district;
+
+    return i18n.language === "bn" ? data.bn : district;
+  };
+
+  const getUpazilaName = () => {
+    if (!district || !upazila) return "";
+
+    const data = bdLocations[district];
+    if (!data) return upazila;
+
+    const found = data.upazilas.find((u) => u.en === upazila);
+
+    if (!found) return upazila;
+
+    return i18n.language === "bn" ? found.bn : found.en;
+  };
+
+  // ================= IMAGE =================
+
+  const pickImage = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6
+    });
+
+    if (!res.canceled) {
+      setPhoto(res.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!photo || !photo.startsWith("file")) return photo;
+
+    const form = new FormData();
+    form.append("file", {
+      uri: photo,
+      name: "profile.jpg",
+      type: "image/jpeg"
+    });
+
+    form.append("upload_preset", UPLOAD_PRESET);
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      { method: "POST", body: form }
+    );
+
+    const data = await res.json();
+    return data.secure_url;
+  };
+
+  // ================= SAVE =================
+  const handleSave = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const imageUrl = await uploadImage();
+
+      await updateDoc(doc(db, "users", user.uid), {
+        name,
+        phone,
+        district,
+        upazila,
+        village,
+        photo: imageUrl
+      });
+
+      Alert.alert("Success", "Profile updated");
+      setEdit(false);
+      loadUser();
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
+
+  // ================= LOADING =================
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-      </View>
-    );
-  }
-
-  if (!userData) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>{t("no_user_data")}</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="green" />
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      
-      {/* ✅ PROFILE IMAGE */}
-      <View style={styles.imageWrapper}>
-        {userData.photo ? (
-          <Image
-            source={{ uri: userData.photo }}
-            style={styles.profileImage}
-          />
+
+      {/* 🌐 Language Switch */}
+      <TouchableOpacity style={styles.langBtn} onPress={toggleLang}>
+        <Text style={{ color: "#fff" }}>
+          {i18n.language === "en" ? "বাংলা" : "EN"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* PHOTO */}
+      <View style={styles.photoBox}>
+        {photo ? (
+          <Image source={{ uri: photo }} style={styles.photo} />
         ) : (
           <Ionicons name="person-circle" size={120} color="#ccc" />
         )}
+
+        {edit && (
+          <TouchableOpacity onPress={pickImage}>
+            <Text style={{ color: "green" }}>Change Photo</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Name */}
-      <View style={styles.item}>
-        <Ionicons name="person-circle-outline" size={28} color="#4CAF50" />
-        <View style={styles.textContainer}>
-          <Text style={styles.label}>{t("name")}</Text>
-          <Text style={styles.value}>{userData.name}</Text>
-        </View>
-      </View>
+      {/* FIELDS */}
+      <Field label={t("name")} value={name} set={setName} edit={edit} icon="person" />
+      <Field label={t("phone")} value={phone} set={setPhone} edit={edit} icon="call" />
 
-      {/* Phone */}
-      <View style={styles.item}>
-        <Ionicons name="call-outline" size={28} color="#4CAF50" />
-        <View style={styles.textContainer}>
-          <Text style={styles.label}>{t("phone")}</Text>
-          <Text style={styles.value}>{userData.phone}</Text>
-        </View>
-      </View>
+      <Field
+        label={t("district")}
+        value={getDistrictName()}
+        edit={false}
+        icon="location"
+      />
 
-      {/* Role */}
-      <View style={styles.item}>
-        <MaterialIcons name="work-outline" size={28} color="#4CAF50" />
-        <View style={styles.textContainer}>
-          <Text style={styles.label}>{t("role")}</Text>
-          <Text style={styles.value}>Service {userData.role}</Text>
-        </View>
-      </View>
+      <Field
+        label={t("upazila")}
+        value={getUpazilaName()}
+        edit={false}
+        icon="map"
+      />
 
-      {/* Address */}
-      <View style={styles.item}>
-        <Ionicons name="location-outline" size={28} color="#4CAF50" />
-        <View style={styles.textContainer}>
-          <Text style={styles.label}>{t("address")}</Text>
-          <Text style={styles.value}>{userData.address}</Text>
-        </View>
-      </View>
+      <Field label={t("village")} value={village} set={setVillage} edit={edit} icon="home" />
+
+      {/* BUTTON */}
+      {!edit ? (
+        <TouchableOpacity style={styles.btn} onPress={() => setEdit(true)}>
+          <Text style={{ color: "#fff" }}>{t("edit_profile")}</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.btn} onPress={handleSave}>
+          <Text style={{ color: "#fff" }}>{t("save_changes")}</Text>
+        </TouchableOpacity>
+      )}
+
     </ScrollView>
   );
 }
 
-/* --------------------------- */
-/* Styles                      */
-/* --------------------------- */
+/* ================= FIELD ================= */
+const Field = ({ label, value, set, edit, icon }) => (
+  <View style={styles.item}>
+    <Ionicons name={icon} size={22} color="green" />
+    <View style={{ flex: 1, marginLeft: 10 }}>
+      <Text style={styles.label}>{label}</Text>
+
+      {edit && set ? (
+        <TextInput value={value} onChangeText={set} style={styles.input} />
+      ) : (
+        <Text style={styles.value}>{value}</Text>
+      )}
+    </View>
+  </View>
+);
+
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    paddingBottom: 200,
     backgroundColor: "#f5f5f5",
     flexGrow: 1
   },
 
-  loadingContainer: {
+  center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center"
   },
 
-  imageWrapper: {
+  langBtn: {
+    position: "absolute",
+    right: 15,
+    top: 10,
+    backgroundColor: "green",
+    padding: 6,
+    borderRadius: 6,
+    zIndex: 10
+  },
+
+  photoBox: {
     alignItems: "center",
     marginBottom: 20
   },
 
-  profileImage: {
+  photo: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#4CAF50"
+    borderColor: "green"
   },
 
   item: {
     flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
-    elevation: 2
-  },
-
-  textContainer: {
-    marginLeft: 15,
-    flex: 1
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: "center"
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#444",
-    marginBottom: 4
+    fontSize: 13,
+    color: "#666"
   },
 
   value: {
     fontSize: 16,
-    color: "#222"
+    color: "#000"
+  },
+
+  input: {
+    borderBottomWidth: 1,
+    borderColor: "green",
+    fontSize: 16
+  },
+
+  btn: {
+    backgroundColor: "green",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 20
   }
 });
