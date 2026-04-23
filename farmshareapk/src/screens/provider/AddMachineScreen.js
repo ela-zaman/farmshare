@@ -16,82 +16,79 @@ import { Picker } from "@react-native-picker/picker";
 
 import { db, auth } from "../../firebase/firebaseConfig";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
-import { bdLocations } from "../../data/bdLocation";
 
 export default function AddMachineScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const [machineType, setMachineType] = useState("");
   const [chargePerDecimal, setChargePerDecimal] = useState("");
   const [chargePerBigha, setChargePerBigha] = useState("");
-  const [district, setDistrict] = useState("");
-  const [upazilla, setUpazilla] = useState("");
-  const [village, setVillage] = useState("");
 
   const scrollViewRef = useRef(null);
-  const districts = Object.keys(bdLocations);
-  const selectedDistrict = bdLocations[district];
-  const upazillas = selectedDistrict ? selectedDistrict.upazilas : [];
-
-  const getDistrictLabel = (districtKey) => {
-    if (!districtKey) return "";
-    return i18n.language === "bn" ? bdLocations[districtKey].bn : districtKey;
-  };
-
-  const getUpazilaLabel = (upazilaObj) => {
-    if (!upazilaObj) return "";
-    return i18n.language === "bn" ? upazilaObj.bn : upazilaObj.en;
-  };
 
   const handleAddMachine = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return Alert.alert(t("error"), t("user_not_logged_in"));
 
-      // Validation
-      if (
-        !machineType ||
-        (!chargePerDecimal && !chargePerBigha) ||
-        !district ||
-        !upazilla ||
-        !village
-      ) {
+      // ✅ VALIDATION
+      if (!machineType || (!chargePerDecimal && !chargePerBigha)) {
         return Alert.alert(t("error"), t("fill_all_fields"));
       }
 
-      let phone = "";
-      let providerName = "";
-
+      // ✅ FETCH USER DATA
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        phone = userData.phone || "";
-        providerName = userData.name || "Unknown";
+
+      if (!userSnap.exists()) {
+        return Alert.alert(t("error"), "User data not found");
       }
 
+      const userData = userSnap.data();
+
+      const district = userData?.district || "";
+      const upazila = userData?.upazila || "";
+      const village = userData?.village || "";
+      const phone = userData?.phone || "";
+      const providerName = userData?.name || "Unknown";
+
+      // ✅ NEW: provider photo from Cloudinary
+      const providerPhoto = userData?.photo || "";
+
+      if (!district || !upazila || !village) {
+        return Alert.alert(
+          t("error"),
+          "Please complete your profile (district, upazila, village)"
+        );
+      }
+
+      // ✅ SAVE MACHINE (UPDATED)
       await addDoc(collection(db, "machines"), {
         machineType,
-        chargePerDecimal,
-        chargePerBigha,
+        chargePerDecimal: chargePerDecimal || "",
+        chargePerBigha: chargePerBigha || "",
+
         district,
-        upazilla,
-        village: village.trim(),
+        upazila,
+        village,
+
         phone,
         providerId: user.uid,
         providerName,
         providerEmail: user.email,
+
+        // ✅ NEW FIELD ADDED
+        providerPhoto,
+
         createdAt: serverTimestamp()
       });
 
       Alert.alert(t("success"), t("machine_added"));
 
+      // RESET
       setMachineType("");
       setChargePerDecimal("");
       setChargePerBigha("");
-      setDistrict("");
-      setUpazilla("");
-      setVillage("");
 
     } catch (error) {
       console.log("Add Machine Error:", error);
@@ -100,7 +97,10 @@ export default function AddMachineScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : null}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : null}
+    >
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.container}
@@ -150,40 +150,6 @@ export default function AddMachineScreen() {
           style={styles.input}
         />
 
-        {/* District */}
-        <Text style={styles.label}>{t("district")}</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={district}
-            onValueChange={(value) => { setDistrict(value); setUpazilla(""); }}
-          >
-            <Picker.Item label={t("select_district")} value="" />
-            {districts.map((d) => (
-              <Picker.Item key={d} label={getDistrictLabel(d)} value={d} />
-            ))}
-          </Picker>
-        </View>
-
-        {/* Upazila */}
-        <Text style={styles.label}>{t("upazilla")}</Text>
-        <View style={styles.pickerContainer}>
-          <Picker selectedValue={upazilla} onValueChange={setUpazilla}>
-            <Picker.Item label={t("select_upazila")} value="" />
-            {upazillas.map((u) => (
-              <Picker.Item key={u.en} label={getUpazilaLabel(u)} value={u.en} />
-            ))}
-          </Picker>
-        </View>
-
-        {/* Village */}
-        <Text style={styles.label}>{t("village")}</Text>
-        <TextInput
-          placeholder={t("enter_village")}
-          value={village}
-          onChangeText={setVillage}
-          style={styles.input}
-        />
-
         {/* Add Button */}
         <TouchableOpacity style={styles.addButton} onPress={handleAddMachine}>
           <Text style={styles.addButtonText}>{t("add_machine_button")}</Text>
@@ -197,12 +163,38 @@ export default function AddMachineScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 20, flexGrow: 1 },
-  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 20 },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20
+  },
   header: { fontSize: 22, fontWeight: "bold", marginRight: 10 },
   headerImage: { width: 24, height: 24 },
   label: { fontWeight: "bold", marginTop: 10, color: "#000" },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, borderRadius: 5, marginBottom: 10, color: "#000" },
-  pickerContainer: { borderWidth: 1, borderColor: "#ccc", borderRadius: 5, marginBottom: 10 },
-  addButton: { backgroundColor: "#4CAF50", padding: 15, borderRadius: 30, alignItems: "center", marginTop: 20 },
-  addButtonText: { color: "#fff", fontWeight: "bold" }
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    color: "#000"
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    marginBottom: 10
+  },
+  addButton: {
+    backgroundColor: "#4CAF50",
+    padding: 15,
+    borderRadius: 30,
+    alignItems: "center",
+    marginTop: 20
+  },
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "bold"
+  }
 });

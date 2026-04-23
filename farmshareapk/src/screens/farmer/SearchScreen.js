@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,14 @@ import {
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { useTranslation } from "react-i18next";
-import { bdLocations } from "../../data/bdLocation"; // ✅ FIXED IMPORT
+
+import { auth, db } from "../../firebase/firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function SearchScreen({ navigation }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const [machineType, setMachineType] = useState(null);
-  const [district, setDistrict] = useState(null);
-  const [upazilla, setUpazila] = useState(null);
-  const [upazilaList, setUpazilaList] = useState([]);
 
   // MACHINE TYPES
   const machineTypes = [
@@ -30,58 +29,58 @@ export default function SearchScreen({ navigation }) {
     { label: t("sprayer"), value: "sprayer" }
   ];
 
-  // DISTRICT LIST (Object থেকে)
-  const districtList = Object.keys(bdLocations).map((key) => ({
-    label: i18n.language === "bn" ? bdLocations[key].bn : key,
-    value: key
-  }));
+  // ✅ SEARCH BUTTON (UPDATED)
+  const handleSearch = async () => {
+    try {
+      const user = auth.currentUser;
 
-  // DISTRICT CHANGE
-  const handleDistrictChange = (item) => {
-    setDistrict(item.value);
-    setUpazila(null);
+      if (!user) {
+        return Alert.alert(t("error"), t("user_not_logged_in"));
+      }
 
-    const selected = bdLocations[item.value];
+      if (!machineType) {
+        return Alert.alert(t("error"), t("select_machine_type"));
+      }
 
-    if (!selected) {
-      setUpazilaList([]);
-      return;
+      // ✅ FETCH USER LOCATION
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
+
+      if (!snap.exists()) {
+        return Alert.alert(t("error"), "User data not found");
+      }
+
+      const userData = snap.data();
+
+      const district = userData?.district;
+      const upazilla = userData?.upazila;
+
+      // ✅ VALIDATION
+      if (!district || !upazilla) {
+        return Alert.alert(
+          t("error"),
+          "Please complete your profile (district & upazila)"
+        );
+      }
+
+      // ✅ NAVIGATE WITH AUTO LOCATION
+      navigation.navigate("SearchResult", {
+        machineType,
+        district,
+        upazilla
+      });
+
+    } catch (error) {
+      console.log("Search Error:", error);
+      Alert.alert(t("error"), error.message);
     }
-
-    const upazilas = selected.upazilas.map((u) => ({
-      label: i18n.language === "bn" ? u.bn : u.en,
-      value: u.en
-    }));
-
-    setUpazilaList(upazilas);
-  };
-
-  // LANGUAGE CHANGE হলে update
-  useEffect(() => {
-    if (district) {
-      handleDistrictChange({ value: district });
-    }
-  }, [i18n.language]);
-
-  // SEARCH BUTTON
-  const handleSearch = () => {
-    if (!machineType || !district || !upazilla) {
-      Alert.alert(t("error"), t("select_all_fields"));
-      return;
-    }
-
-    navigation.navigate("SearchResult", {
-      machineType,
-      district,
-      upazilla
-    });
   };
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>{t("farm_machine")}</Text>
 
-      {/* MACHINE TYPE */}
+      {/* MACHINE TYPE ONLY */}
       <Dropdown
         style={styles.dropdown}
         data={machineTypes}
@@ -90,28 +89,6 @@ export default function SearchScreen({ navigation }) {
         placeholder={t("select_machine_type")}
         value={machineType}
         onChange={(item) => setMachineType(item.value)}
-      />
-
-      {/* DISTRICT */}
-      <Dropdown
-        style={styles.dropdown}
-        data={districtList}
-        labelField="label"
-        valueField="value"
-        placeholder={t("select_district")}
-        value={district}
-        onChange={handleDistrictChange}
-      />
-
-      {/* UPAZILA */}
-      <Dropdown
-        style={styles.dropdown}
-        data={upazilaList}
-        labelField="label"
-        valueField="value"
-        placeholder={t("select_upazila")}
-        value={upazilla}
-        onChange={(item) => setUpazila(item.value)}
       />
 
       {/* SEARCH BUTTON */}

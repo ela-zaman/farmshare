@@ -9,70 +9,108 @@ import {
   TouchableOpacity
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../firebase/firebaseConfig";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "../../firebase/firebaseConfig";
 import { bdLocations } from "../../data/bdLocation";
 import { useNavigation } from "@react-navigation/native";
 
 export default function SearchResult({ route }) {
   const { t, i18n } = useTranslation();
-  const { machineType, district, upazilla } = route.params || {};
+  const { machineType } = route.params || {};
   const navigation = useNavigation();
 
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [userDistrict, setUserDistrict] = useState(null);
+  const [userUpazilla, setUserUpazilla] = useState(null);
+
   const isBn = i18n.language === "bn";
 
-  // ✅ SAFE normalize (FIXED BUG)
+  // ---------------- SAFE NORMALIZE ----------------
   const normalize = (text) => {
     if (!text) return "";
     return text.toString().trim().toLowerCase();
   };
 
+  // ---------------- LOAD USER + MACHINES ----------------
   useEffect(() => {
-    fetchMachines();
+    loadData();
   }, []);
 
-  const fetchMachines = async () => {
+  const loadData = async () => {
     try {
-      let q = collection(db, "machines");
-      const conditions = [];
+      const user = auth.currentUser;
+      if (!user) return;
 
-      if (machineType) {
-        conditions.push(where("machineType", "==", machineType));
+      // 🔥 Get user location
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setUserDistrict(data.district);
+        setUserUpazilla(data.upazila);
+
+        // Fetch machines AFTER getting user data
+        fetchMachines(data.district, data.upazila);
       }
-
-      if (district) {
-        conditions.push(where("district", "==", district));
-      }
-
-      if (upazilla) {
-        conditions.push(where("upazilla", "==", upazilla));
-      }
-
-      if (conditions.length > 0) {
-        q = query(q, ...conditions);
-      }
-
-      const snapshot = await getDocs(q);
-
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      setMachines(data);
-    } catch (error) {
-      console.log("ERROR FETCHING MACHINES:", error);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.log("LOAD ERROR:", err);
     }
   };
 
-  // ------------------------------
-  // Helpers
-  // ------------------------------
+  // ---------------- FETCH MACHINES ----------------
+  const fetchMachines = async (district, upazila) => {
+  try {
+    let data = [];
+    console.log("USER DISTRICT:", district);
+console.log("USER UPAZILA:", upazila);
+
+    // ✅ 1. FULL MATCH (machine + district + upazila)
+    let q1 = query(
+      collection(db, "machines"),
+      where("machineType", "==", machineType),
+      where("district", "==", district),
+      where("upazila", "==", upazila)
+    );
+
+    let snap = await getDocs(q1);
+    data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // ✅ 2. FALLBACK: district only
+    if (data.length === 0) {
+      let q2 = query(
+        collection(db, "machines"),
+        where("machineType", "==", machineType),
+        where("district", "==", district)
+      );
+
+      snap = await getDocs(q2);
+      data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    // ✅ 3. FINAL FALLBACK: machineType only
+    if (data.length === 0) {
+      let q3 = query(
+        collection(db, "machines"),
+        where("machineType", "==", machineType)
+      );
+
+      snap = await getDocs(q3);
+      data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    setMachines(data);
+
+  } catch (error) {
+    console.log("ERROR FETCHING MACHINES:", error);
+    setMachines([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // ---------------- HELPERS ----------------
 
   const getMachineImage = (type) => {
     if (!type) return require("../../../assets/images/add.png");
@@ -108,40 +146,20 @@ export default function SearchResult({ route }) {
       (u) => normalize(u?.en) === normalize(upazilaEn)
     );
 
-    if (!upazilaObj) return upazilaEn;
-
-    return isBn ? upazilaObj.bn : upazilaObj.en;
-  };
-
-  const MACHINE_TYPE_MAP = {
-    tractor: "tractor",
-    powertiller: "powertiller",
-    reaper: "reaper",
-    bed_planter: "bed_planter",
-    combine_harvester: "combine_harvester",
-    thresher: "thresher",
-    sprayer: "sprayer"
+    return isBn ? (upazilaObj?.bn || upazilaEn) : (upazilaObj?.en || upazilaEn);
   };
 
   const getMachineTypeLabel = (value) => {
     if (!value) return "";
-    const key = MACHINE_TYPE_MAP[value?.toLowerCase?.()];
-    return key ? t(key) : value;
+    return t(value) || value;
   };
 
-  // ✅ TAKA FORMAT
   const formatTaka = (amount) => {
     if (!amount) return isBn ? "০ টাকা" : "0 Taka";
-
-    return isBn
-      ? `${amount} টাকা`
-      : `${amount} Taka`;
+    return isBn ? `${amount} টাকা` : `${amount} Taka`;
   };
 
-  // ------------------------------
-  // UI
-  // ------------------------------
-
+  // ---------------- RENDER ITEM ----------------
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
@@ -171,14 +189,13 @@ export default function SearchResult({ route }) {
         </Text>
 
         <Text style={styles.text}>
-          {t("upazilla")}: {getUpazillaLabel(item.district, item.upazilla)}
+          {t("upazilla")}: {getUpazillaLabel(item.district, item.upazila)}
         </Text>
 
         <Text style={styles.text}>
           {t("village")}: {item.village || ""}
         </Text>
 
-        {/* ✅ NEW MULTILINGUAL CHARGES */}
         <Text style={styles.text}>
           {t("charge_per_decimal")}: {formatTaka(item.chargePerDecimal)}
         </Text>
@@ -190,6 +207,7 @@ export default function SearchResult({ route }) {
     </TouchableOpacity>
   );
 
+  // ---------------- LOADING ----------------
   if (loading) {
     return (
       <View style={styles.center}>
@@ -199,9 +217,10 @@ export default function SearchResult({ route }) {
     );
   }
 
+  // ---------------- UI ----------------
   return (
     <FlatList
-      data={machines}
+      data={machines || []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       contentContainerStyle={{ padding: 15 }}
@@ -214,10 +233,7 @@ export default function SearchResult({ route }) {
   );
 }
 
-// ------------------------------
-// Styles
-// ------------------------------
-
+// ---------------- STYLES ----------------
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",

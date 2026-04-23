@@ -137,8 +137,8 @@ export default function ProviderMachineDetails() {
         <Text style={styles.infoText}>
           {t("upazila")}:{" "}
           {i18n.language === "bn"
-            ? getUpazillaBn(machine.district, machine.upazilla)
-            : machine.upazilla}
+            ? getUpazillaBn(machine.district, machine.upazila)
+            : machine.upazila}
         </Text>
       </View>
 

@@ -126,7 +126,7 @@ export default function BookingSummary({ route, navigation }) {
       <Text style={styles.title}>{isBn ? t(machine?.machineType) : machine?.machineType}</Text>
       <Text style={styles.label}>{t("provider")}: {machine?.providerName}</Text>
       <Text style={styles.label}>{t("district")}: {machine?.district}</Text>
-      <Text style={styles.label}>{t("upazilla")}: {machine?.upazilla}</Text>
+      <Text style={styles.label}>{t("upazilla")}: {machine?.upazila}</Text>
       <Text style={styles.label}>{t("village")}: {machine?.village}</Text>
       <Text style={styles.label}>{t("phone")}: {machine?.phone}</Text>
 

@@ -158,7 +158,8 @@ export default function BookingDetails({ route, navigation }) {
   const [tillageAmount, setTillageAmount] = useState("");
   const [landSize, setLandSize] = useState("");
   const [landAddress, setLandAddress] = useState("");
-  const [selectedChargeType, setSelectedChargeType] = useState("per_decimal"); // ✅
+  const [selectedChargeType, setSelectedChargeType] = useState("per_decimal");
+  const [providerImage, setProviderImage] = useState(null);// ✅
 
   const isBn = i18n.language === "bn";
   LocaleConfig.defaultLocale = isBn ? "bn" : "en";
@@ -177,6 +178,7 @@ export default function BookingDetails({ route, navigation }) {
       try {
         setLoading(true);
         await fetchBookings();
+        await fetchProviderImage();
       } catch (e) {
         console.log("LOAD ERROR:", e);
       } finally {
@@ -191,7 +193,31 @@ export default function BookingDetails({ route, navigation }) {
     const snap = await getDoc(doc(db, "users", user.uid));
     if (snap.exists()) setUserInfo({ ...snap.data(), uid: user.uid });
   };
+const fetchProviderImage = async () => {
+  try {
+    console.log("Provider ID:", machine?.providerId);
 
+    if (!machine?.providerId) return;
+
+    const userRef = doc(db, "users", machine.providerId);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      console.log("Provider user NOT found in users collection");
+      return;
+    }
+
+    const data = userSnap.data();
+    console.log("Provider DATA:", data);
+
+    setProviderImage(
+      data.photo || data.image || data.photoUrl || null
+    );
+
+  } catch (err) {
+    console.log("Provider image fetch error:", err);
+  }
+};
   const fetchBookings = async () => {
     if (!machine?.id) return;
     const q = query(
@@ -304,15 +330,30 @@ export default function BookingDetails({ route, navigation }) {
         <View style={styles.cardContent}>
           <View style={styles.info}>
             <Text style={styles.title}>{isBn ? t(machine?.machineType) : machine?.machineType}</Text>
+            {providerImage && (
+  <Image
+    source={{ uri: providerImage }}
+    style={{
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      marginTop: 8
+    }}
+  />
+)}
             <Text>{t("provider")}: {machine?.providerName}</Text>
             <Text>{t("district")}: {getDistrictLabel(machine?.district)}</Text>
-            <Text>{t("upazilla")}: {getUpazilaLabel(machine?.district, machine?.upazilla)}</Text>
+            <Text>{t("upazilla")}: {getUpazilaLabel(machine?.district, machine?.upazila)}</Text>
             <Text>{t("village")}: {machine?.village}</Text>
             <Text>{t("phone")}: {machine?.phone}</Text>
             <Text>{t("charge_per_bigha")}: {isBn ? toBanglaNumber(machine?.chargePerBigha) : machine?.chargePerBigha}</Text>
             <Text>{t("charge_per_decimal")}: {isBn ? toBanglaNumber(machine?.chargePerDecimal) : machine?.chargePerDecimal}</Text>
           </View>
-          <Image source={machineImages[machine?.machineType?.toLowerCase()]} style={styles.image} resizeMode="contain"/>
+          <Image
+  source={{ uri: machine?.providerPhoto }}
+  style={styles.image}
+  resizeMode="contain"
+/>
         </View>
       </View>
 
