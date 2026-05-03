@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { collection, addDoc, doc, getDoc } from "firebase/firestore";
-import { db, auth } from "../../firebase/firebaseConfig"; // ✅ FIX ADDED
+import { db, auth } from "../../firebase/firebaseConfig";
 
 // ---------------- BookingSummary Component ----------------
 export default function BookingSummary({ route, navigation }) {
@@ -19,38 +19,36 @@ export default function BookingSummary({ route, navigation }) {
   const {
     machine,
     selectedDate,
-    selectedSlots,
-    slots,
+    selectedSlots = [],
+    slots = [],
     tillageAmount,
     landSize,
     landAddress,
     chargeType
-  } = route.params;
+  } = route.params || {};
 
-  const [userInfo, setUserInfo] = useState(null); // ✅ NEW FIX
-
+  const [userInfo, setUserInfo] = useState(null);
   const [totalCharge, setTotalCharge] = useState(0);
   const [chargePerDecimal, setChargePerDecimal] = useState(0);
   const [chargePerBigha, setChargePerBigha] = useState(0);
   const [totalHours, setTotalHours] = useState(0);
   const [slotLabels, setSlotLabels] = useState([]);
 
-  const user = auth.currentUser; // ✅ CURRENT USER
+  const user = auth.currentUser;
 
-  // Convert number to Bangla
+  // ---------------- Number Convert ----------------
   const toBanglaNumber = (num) => {
     const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
     return num.toString().split("").map(d => bn[d] || d).join("");
   };
 
-  // ---------------- FETCH USER INFO (NEW FIX) ----------------
+  // ---------------- Fetch User ----------------
   useEffect(() => {
     const fetchUser = async () => {
       if (!user?.uid) return;
 
       try {
         const snap = await getDoc(doc(db, "users", user.uid));
-
         if (snap.exists()) {
           setUserInfo({
             uid: user.uid,
@@ -63,66 +61,84 @@ export default function BookingSummary({ route, navigation }) {
     };
 
     fetchUser();
-  }, []);
+  }, [user]);
 
+  // ---------------- Slot Label ----------------
   const getSlotLabel = (slot) => {
-    const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা" };
+    const labelsBn = {
+      morning:"সকাল",
+      noon:"দুপুর",
+      afternoon:"বিকাল",
+      evening:"সন্ধ্যা"
+    };
+
     const labelText = isBn ? labelsBn[slot.label] : slot.label;
 
     const formatHour = (h) => {
       let hour = h % 12;
-      if(hour === 0) hour = 12;
+      if (hour === 0) hour = 12;
       return isBn ? toBanglaNumber(hour) : hour;
     };
 
-    return `${labelText} ${formatHour(slot.start)}.00 - ${formatHour(slot.end)}.00 ${isBn?"টা":""}`;
+    return `${labelText} ${formatHour(slot.start)}.00 - ${formatHour(slot.end)}.00 ${isBn ? "টা" : ""}`;
   };
 
+  // ---------------- Load Charges + Calculate ----------------
   useEffect(() => {
     const loadCharges = async () => {
       if (!machine?.id) return;
 
-      const snap = await getDoc(doc(db, "machines", machine.id));
+      try {
+        const snap = await getDoc(doc(db, "machines", machine.id));
 
-      if (snap.exists()) {
-        const data = snap.data();
+        if (snap.exists()) {
+          const data = snap.data();
 
-        const perDecimal = data?.chargePerDecimal || 0;
-        const perBigha = data?.chargePerBigha || 0;
+          const perDecimal = data?.chargePerDecimal || 0;
+          const perBigha = data?.chargePerBigha || 0;
 
-        setChargePerDecimal(perDecimal);
-        setChargePerBigha(perBigha);
+          setChargePerDecimal(perDecimal);
+          setChargePerBigha(perBigha);
 
-        let total = 0;
+          // ✅ SLOT COUNT
+          const slotCount = selectedSlots.length;
 
-        if (chargeType === "per_decimal") {
-          total = perDecimal * landSize * tillageAmount;
-        } else {
-          total = perBigha * landSize * tillageAmount;
+          let baseCharge = 0;
+
+          if (chargeType === "per_decimal") {
+            baseCharge = perDecimal * landSize * tillageAmount;
+          } else {
+            baseCharge = perBigha * landSize * tillageAmount;
+          }
+
+          // ✅ FINAL TOTAL
+          const total = baseCharge * slotCount;
+          setTotalCharge(total);
+
+          // ✅ SLOT LABELS
+          const labels = selectedSlots.map(id => {
+            const slot = slots.find(s => s.id === id);
+            return slot ? getSlotLabel(slot) : id;
+          });
+          setSlotLabels(labels);
+
+          // ✅ TOTAL HOURS
+          const hours = selectedSlots.reduce((sum, id) => {
+            const slot = slots.find(s => s.id === id);
+            return slot ? sum + (slot.end - slot.start) : sum;
+          }, 0);
+
+          setTotalHours(hours);
         }
-
-        setTotalCharge(total);
-
-        const labels = selectedSlots.map(id => {
-          const slot = slots.find(s => s.id === id);
-          return slot ? getSlotLabel(slot) : id;
-        });
-
-        setSlotLabels(labels);
-
-        const hours = selectedSlots.reduce((sum, id) => {
-          const slot = slots.find(s => s.id === id);
-          return slot ? sum + (slot.end - slot.start) : sum;
-        }, 0);
-
-        setTotalHours(hours);
+      } catch (err) {
+        console.log("CHARGE LOAD ERROR:", err);
       }
     };
 
     loadCharges();
-  }, []);
+  }, [machine, selectedSlots, slots, chargeType, landSize, tillageAmount]);
 
-  // ---------------- CONFIRM BOOKING ----------------
+  // ---------------- Confirm Booking ----------------
   const handleConfirmBooking = async () => {
     try {
       if (!userInfo) {
@@ -133,7 +149,6 @@ export default function BookingSummary({ route, navigation }) {
         machineId: machine.id,
         providerId: machine.providerId,
 
-        // ✅ CURRENT USER INFO (FIXED)
         userId: userInfo.uid,
         userName: userInfo.name || "",
         userPhone: userInfo.phone || "",
@@ -146,8 +161,10 @@ export default function BookingSummary({ route, navigation }) {
         chargePerDecimal,
         chargePerBigha,
         totalCharge,
+
         dates: [selectedDate],
         slots: selectedSlots,
+
         status: "pending",
         createdAt: new Date(),
 
@@ -162,8 +179,9 @@ export default function BookingSummary({ route, navigation }) {
     }
   };
 
+  // ---------------- UI ----------------
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:50}}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
 
       <Text style={styles.title}>
         {isBn ? t(machine?.machineType) : machine?.machineType}
@@ -185,6 +203,9 @@ export default function BookingSummary({ route, navigation }) {
           <Text key={idx}>- {label}</Text>
         ))}
 
+        {/* ✅ SLOT COUNT */}
+        <Text>{t("total_slots")}: {selectedSlots.length}</Text>
+
         <Text>{t("total_time")}: {totalHours}</Text>
         <Text>{t("land_size")}: {landSize}</Text>
         <Text>{t("land_address")}: {landAddress}</Text>
@@ -198,7 +219,11 @@ export default function BookingSummary({ route, navigation }) {
       </View>
 
       <View style={styles.btnContainer}>
-        <Button title={t("confirm_booking")} onPress={handleConfirmBooking} color="#007bff"/>
+        <Button
+          title={t("confirm_booking")}
+          onPress={handleConfirmBooking}
+          color="#007bff"
+        />
       </View>
 
     </ScrollView>
@@ -207,11 +232,11 @@ export default function BookingSummary({ route, navigation }) {
 
 // ---------------- Styles ----------------
 const styles = StyleSheet.create({
-  container:{flex:1,padding:15,backgroundColor:"#fff"},
-  title:{fontSize:22,fontWeight:"bold",marginBottom:10,color:"#003366"},
-  label:{fontSize:16,marginBottom:5},
-  section:{marginTop:20,padding:15,backgroundColor:"#f2f8ff",borderRadius:10},
-  sectionTitle:{fontSize:18,fontWeight:"bold",marginBottom:10},
-  total:{fontSize:18,fontWeight:"bold",marginTop:10},
-  btnContainer:{marginTop:25}
+  container: { flex: 1, padding: 15, backgroundColor: "#fff" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 10, color: "#003366" },
+  label: { fontSize: 16, marginBottom: 5 },
+  section: { marginTop: 20, padding: 15, backgroundColor: "#f2f8ff", borderRadius: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  total: { fontSize: 18, fontWeight: "bold", marginTop: 10 },
+  btnContainer: { marginTop: 25 }
 });

@@ -195,29 +195,61 @@ export default function BookingDetails({ route, navigation }) {
   };
 const fetchProviderImage = async () => {
   try {
-    console.log("Provider ID:", machine?.providerId);
-
-    if (!machine?.providerId) return;
+    if (!machine?.providerId) {
+      console.log("❌ No providerId");
+      return;
+    }
 
     const userRef = doc(db, "users", machine.providerId);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      console.log("Provider user NOT found in users collection");
+      console.log("❌ User not found");
       return;
     }
 
     const data = userSnap.data();
-    console.log("Provider DATA:", data);
+    console.log("✅ User data:", data);
 
-    setProviderImage(
-      data.photo || data.image || data.photoUrl || null
-    );
+    const imageUrl =
+  data.photo ||
+  data.photoUrl?.secure_url ||
+  data.photoUrl ||
+  data.image ||
+  null;
+
+    console.log("✅ Image URL:", imageUrl);
+    console.log("Image fields:", {
+  photo: data.photo,
+  image: data.image,
+  photoUrl: data.photoUrl
+});
+
+    setProviderImage(imageUrl);
+
 
   } catch (err) {
-    console.log("Provider image fetch error:", err);
+    console.error("❌ Fetch error:", err);
+
   }
 };
+  const getMachineImage = (type) => {
+    if (!type) return require("../../../assets/images/add.png");
+
+    const key = type.toLowerCase().trim().replace(/\s/g, "_");
+
+    const IMAGE_MAP = {
+      tractor: require("../../../assets/images/Machines/tractor.png"),
+      powertiller: require("../../../assets/images/Machines/powertiller.png"),
+      reaper: require("../../../assets/images/Machines/reaper.png"),
+      bed_planter: require("../../../assets/images/Machines/bed planter.png"),
+      combine_harvester: require("../../../assets/images/Machines/combine harvester.png"),
+      thresher: require("../../../assets/images/Machines/thresher.png"),
+      sprayer: require("../../../assets/images/Machines/sprayer.jpg")
+    };
+
+    return IMAGE_MAP[key] ;
+  };
   const fetchBookings = async () => {
     if (!machine?.id) return;
     const q = query(
@@ -310,6 +342,7 @@ const fetchProviderImage = async () => {
     });
   };
 
+
   const getSlotLabel = (slot) => {
     const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা" };
     const labelText = isBn ? labelsBn[slot.label] : slot.label;
@@ -349,8 +382,9 @@ const fetchProviderImage = async () => {
             <Text>{t("charge_per_bigha")}: {isBn ? toBanglaNumber(machine?.chargePerBigha) : machine?.chargePerBigha}</Text>
             <Text>{t("charge_per_decimal")}: {isBn ? toBanglaNumber(machine?.chargePerDecimal) : machine?.chargePerDecimal}</Text>
           </View>
-          <Image
-  source={{ uri: machine?.providerPhoto }}
+          
+  <Image
+  source={getMachineImage(machine?.machineType)}
   style={styles.image}
   resizeMode="contain"
 />
