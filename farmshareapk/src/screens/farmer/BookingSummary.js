@@ -148,6 +148,7 @@ export default function BookingSummary({ route, navigation }) {
       await addDoc(collection(db, "bookings"), {
         machineId: machine.id,
         providerId: machine.providerId,
+        machineType:machine.machineType,
 
         userId: userInfo.uid,
         userName: userInfo.name || "",

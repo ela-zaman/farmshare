@@ -7,11 +7,20 @@ import {
   TouchableOpacity,
   ScrollView
 } from "react-native";
+
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { MaterialIcons, FontAwesome5, Entypo } from "@expo/vector-icons";
+
+import { LinearGradient } from "expo-linear-gradient";
+
+import {
+  MaterialIcons,
+  FontAwesome5,
+  Entypo
+} from "@expo/vector-icons";
+
 import { bdLocations } from "../../data/bdLocation";
 
 export default function ProviderMachineDetails() {
@@ -20,6 +29,7 @@ export default function ProviderMachineDetails() {
   const route = useRoute();
   const { t, i18n } = useTranslation();
 
+  const isBn = i18n.language === "bn";
   const { machineId } = route.params;
 
   useEffect(() => {
@@ -37,198 +47,241 @@ export default function ProviderMachineDetails() {
     return () => unsubscribe();
   }, []);
 
-  /* 🔥 Image Logic */
-  const getImage = (machineType) => {
-    if (!machineType) return require("../../../assets/images/add.png");
-    const type = machineType.toLowerCase();
+  /* ================= IMAGE LOGIC ================= */
+  const getImage = (type) => {
+    if (!type) return require("../../../assets/images/add.png");
 
-    if (type === "tractor") return require("../../../assets/images/Machines/tractor.png");
-    if (type === "powertiller") return require("../../../assets/images/Machines/powertiller.png");
-    if (type === "reaper") return require("../../../assets/images/Machines/reaper.png");
-    if (type === "sprayer") return require("../../../assets/images/Machines/sprayer.jpg");
-    if (type === "thresher") return require("../../../assets/images/Machines/thresher.png");
-    if (type === "combine harvester") return require("../../../assets/images/Machines/combine harvester.png");
-    if (type === "bed planter") return require("../../../assets/images/Machines/bed planter.png");
+    const t = type.toLowerCase();
+
+    if (t === "tractor")
+      return require("../../../assets/images/Machines/tractor.png");
+
+    if (t === "powertiller")
+      return require("../../../assets/images/Machines/powertiller.png");
+
+    if (t === "reaper")
+      return require("../../../assets/images/Machines/reaper.png");
+
+    if (t === "sprayer")
+      return require("../../../assets/images/Machines/sprayer.jpg");
+
+    if (t === "thresher")
+      return require("../../../assets/images/Machines/thresher.png");
+
+    if (t === "combine harvester")
+      return require("../../../assets/images/Machines/combine harvester.png");
+
+    if (t === "bed planter")
+      return require("../../../assets/images/Machines/bed planter.png");
 
     return require("../../../assets/images/add.png");
   };
 
-  /* 🔥 Translate Machine Type */
-  const getMachineTypeLabel = (type) => {
-    if (!type) return "";
-    const key = type.toLowerCase().replace(/\s/g, "_");
-    return t(key);
+  /* ================= LOCATION TRANSLATION ================= */
+
+  const getDistrictBn = (districtEn) =>
+    bdLocations[districtEn]?.bn || districtEn;
+
+  const getUpazilaBn = (districtEn, upazilaEn) => {
+    const district = bdLocations[districtEn];
+    if (!district) return upazilaEn;
+
+    const upazila = district.upazilas.find(
+      (u) => u.en === upazilaEn
+    );
+
+    return upazila ? upazila.bn : upazilaEn;
   };
 
-  /* 🔥 Translate Tillage Type */
-  const getTillageTypeLabel = (type) => {
-    if (!type) return "";
-    const key = type.toLowerCase().replace(/\s/g, "_");
-    return t(key);
+  const getVillageBn = (districtEn, upazilaEn, villageEn) => {
+    const district = bdLocations[districtEn];
+    if (!district || !villageEn) return villageEn;
+
+    const upazila = district.upazilas.find(
+      (u) => u.en === upazilaEn
+    );
+
+    if (!upazila || !upazila.villages) return villageEn;
+
+    const village = upazila.villages.find(
+      (v) => v.en === villageEn
+    );
+
+    return village ? village.bn : villageEn;
   };
 
+  /* ================= BANGLA NUMBER CONVERTER ================= */
+  const toBnNumber = (num) => {
+    if (num === null || num === undefined || num === "")
+      return t("not_specified");
+
+    const bnDigits = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+
+    return num
+      .toString()
+      .split("")
+      .map((d) => (isBn ? bnDigits[d] ?? d : d))
+      .join("");
+  };
+
+  /* ================= LOADING ================= */
   if (!machine) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.loading}>
         <Text>{t("loading") || "Loading..."}</Text>
       </View>
     );
   }
 
-  /* ------------------- */
-  /* District Translation */
-  /* ------------------- */
-  const getDistrictBn = (districtEn) => {
-    return bdLocations[districtEn]?.bn || districtEn;
-  };
-
-  const getUpazillaBn = (districtEn, upazillaEn) => {
-    const district = bdLocations[districtEn];
-    if (!district) return upazillaEn;
-    const upazilla = district.upazilas.find(u => u.en === upazillaEn);
-    return upazilla ? upazilla.bn : upazillaEn;
-  };
+  const imageSource =
+    machine.machineImage
+      ? { uri: machine.machineImage }
+      : getImage(machine.machineType);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
-      
-      {/* Image */}
-      <Image
-        source={getImage(machine.machineType)}
-        style={styles.image}
-        resizeMode="contain"
-      />
+    <LinearGradient colors={["#e8f5e9", "#f5f5f5"]} style={styles.container}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 300 }}>
 
-      {/* 🔥 Machine Name (Translated) */}
-      <Text style={styles.name}>
-        {getMachineTypeLabel(machine.machineType)}
-      </Text>
+        {/* IMAGE */}
+        <View style={styles.imageCard}>
+          <Image source={imageSource} style={styles.image} />
+        </View>
 
-    
-
-      {/* 🔥 Tillage Type (Translated) */}
-      <View style={styles.infoRow}>
-        <FontAwesome5 name="seedling" size={20} color="#555" style={styles.icon} />
-        <Text style={styles.infoText}>
-          {t("charge_per_bigha")}: {machine.chargePerBigha}
+        {/* TITLE */}
+        <Text style={styles.title}>
+          {t(machine.machineType)}
         </Text>
-      </View>
-       <View style={styles.infoRow}>
-        <FontAwesome5 name="seedling" size={20} color="#555" style={styles.icon} />
-        <Text style={styles.infoText}>
-          {t("charge_per_decimal")}: {machine.chargePerDecimal}
-        </Text>
-      </View>
 
-      {/* 🔥 Charge ONLY (removed charge type) */}
-    
+        {/* MODEL */}
+        <View style={styles.card}>
+          <FontAwesome5 name="tractor" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("model")}: {machine.machineModel}
+          </Text>
+        </View>
 
-      {/* Village */}
-      <View style={styles.infoRow}>
-        <Entypo name="home" size={20} color="#555" style={styles.icon} />
-        <Text style={styles.infoText}>
-          {t("village")}: {machine.village}
-        </Text>
-      </View>
+        {/* CHARGES (TRANSLATED) */}
+        <View style={styles.card}>
+          <FontAwesome5 name="clock" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("hour_charge")}: {toBnNumber(machine.chargePerHour)} {t("taka")}
+          </Text>
+        </View>
 
-      {/* Upazilla */}
-      <View style={styles.infoRow}>
-        <MaterialIcons name="location-on" size={20} color="#555" style={styles.icon} />
-        <Text style={styles.infoText}>
-          {t("upazila")}:{" "}
-          {i18n.language === "bn"
-            ? getUpazillaBn(machine.district, machine.upazila)
-            : machine.upazila}
-        </Text>
-      </View>
+        <View style={styles.card}>
+          <FontAwesome5 name="layer-group" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("decimal_charge")}: {toBnNumber(machine.chargePerDecimal)} {t("taka")}
+          </Text>
+        </View>
 
-      {/* District */}
-      <View style={styles.infoRow}>
-        <MaterialIcons name="location-city" size={20} color="#555" style={styles.icon} />
-        <Text style={styles.infoText}>
-          {t("district")}:{" "}
-          {i18n.language === "bn"
-            ? getDistrictBn(machine.district)
-            : machine.district}
-        </Text>
-      </View>
+        <View style={styles.card}>
+          <FontAwesome5 name="seedling" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("bigha_charge")}: {toBnNumber(machine.chargePerBigha)} {t("taka")}
+          </Text>
+        </View>
 
-      {/* Edit Button */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() =>
-          navigation.navigate("ProviderEditMachine", { machine })
-        }
-      >
-        <Text style={styles.buttonText}>
-          {t("edit_details") || "Edit Details"}
-        </Text>
-      </TouchableOpacity>
+        {/* LOCATION (TRANSLATED) */}
+        <View style={styles.card}>
+          <Entypo name="home" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("village")}: {getVillageBn(machine.district, machine.upazila, machine.village)}
+          </Text>
+        </View>
 
-    </ScrollView>
+        <View style={styles.card}>
+          <MaterialIcons name="location-city" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("upazilla")}: {getUpazilaBn(machine.district, machine.upazila)}
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <MaterialIcons name="location-on" size={18} color="#4CAF50" />
+          <Text style={styles.text}>
+            {t("district")}: {getDistrictBn(machine.district)}
+          </Text>
+        </View>
+
+        {/* EDIT BUTTON */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() =>
+            navigation.navigate("ProviderEditMachine", { machine })
+          }
+        >
+          <MaterialIcons name="edit" size={20} color="#fff" />
+          <Text style={styles.buttonText}>
+            {t("edit_details")}
+          </Text>
+        </TouchableOpacity>
+
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
-/* --------------------------- */
-/* Styles                      */
-/* --------------------------- */
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f5f5f5",
-  },
+  container: { flex: 1, padding: 15 },
 
-  loadingContainer: {
+  loading: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
+  },
+  
+
+  imageCard: {
+    borderRadius: 15,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    marginBottom: 15
   },
 
   image: {
     width: "100%",
-    height: 250,
-    marginBottom: 20,
-    borderRadius: 12,
-    backgroundColor: "#fff"
+    height: 240
   },
 
-  name: {
-    fontSize: 24,
+  title: {
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center"
+    textAlign: "center",
+    marginBottom: 15,
+    color: "#2e7d32"
   },
 
-  infoRow: {
+  card: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
     backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+    elevation: 2
   },
 
-  icon: {
-    marginRight: 10,
-  },
-
-  infoText: {
-    fontSize: 16,
+  text: {
+    marginLeft: 10,
+    fontSize: 15,
     color: "#333"
   },
 
   button: {
-    marginTop: 20,
+    flexDirection: "row",
     backgroundColor: "#4CAF50",
     padding: 12,
     borderRadius: 25,
+    justifyContent: "center",
     alignItems: "center",
+    marginTop: 15
   },
 
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 16
-  },
+    marginLeft: 8
+  }
 });

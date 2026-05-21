@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
-import { ImageBackground, Image, StyleSheet } from "react-native";
+import { View, Image, StyleSheet } from "react-native";
 
 export default function SplashScreen({ navigation }) {
 
   useEffect(() => {
-    // Navigate to LanguageSelector after 3 seconds
+    // Navigate to LanguageSelector after 8 seconds
     const timer = setTimeout(() => {
       navigation.replace("LanguageSelector");
     }, 8000);
@@ -13,28 +13,25 @@ export default function SplashScreen({ navigation }) {
   }, [navigation]);
 
   return (
-    <ImageBackground
-      source={require("../../../assets/images/background5.png")}
-      style={styles.container}
-      resizeMode="cover"  // Ensures background fills the screen
-    >
+    <View style={styles.container}>
       <Image
         source={require("../../../assets/logo/Logo.png")}
         style={styles.logo}
       />
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0b6101", // Change this color as needed
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
   logo: {
     width: 200,
     height: 200,
-    resizeMode: "contain"
-  }
+    resizeMode: "contain",
+  },
 });

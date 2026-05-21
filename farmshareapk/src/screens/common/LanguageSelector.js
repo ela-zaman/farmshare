@@ -25,12 +25,12 @@ export default function LanguageSelector({ navigation }) {
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim1, {
-          toValue: -10,  // button 1 floats up
+          toValue: -10,
           duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(floatAnim1, {
-          toValue: 10,   // button 1 floats down
+          toValue: 10,
           duration: 800,
           useNativeDriver: true,
         }),
@@ -40,12 +40,12 @@ export default function LanguageSelector({ navigation }) {
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim2, {
-          toValue: 10,   // button 2 floats down initially
+          toValue: 10,
           duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(floatAnim2, {
-          toValue: -10,  // button 2 floats up
+          toValue: -10,
           duration: 800,
           useNativeDriver: true,
         }),
@@ -72,25 +72,27 @@ export default function LanguageSelector({ navigation }) {
         </View>
       </View>
 
-      {/* Buttons */}
-      <View style={styles.buttonWrapper}>
-        <Animated.View style={{ transform: [{ translateY: floatAnim1 }] }}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => selectLanguage("en")}
-          >
-            <Text style={styles.buttonText}>{t("english")}</Text>
-          </TouchableOpacity>
-        </Animated.View>
+      {/* Center Buttons */}
+      <View style={styles.centerContainer}>
+        <View style={styles.buttonWrapper}>
+          <Animated.View style={{ transform: [{ translateY: floatAnim1 }] }}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => selectLanguage("en")}
+            >
+              <Text style={styles.buttonText}>{t("english")}</Text>
+            </TouchableOpacity>
+          </Animated.View>
 
-        <Animated.View style={{ transform: [{ translateY: floatAnim2 }] }}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => selectLanguage("bn")}
-          >
-            <Text style={styles.buttonText}>বাংলা</Text>
-          </TouchableOpacity>
-        </Animated.View>
+          <Animated.View style={{ transform: [{ translateY: floatAnim2 }] }}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => selectLanguage("bn")}
+            >
+              <Text style={styles.buttonText}>বাংলা</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
       </View>
     </ImageBackground>
   );
@@ -99,22 +101,24 @@ export default function LanguageSelector({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
   },
+
   textContainer: {
     position: "absolute",
     top: 80,
     width: "100%",
     alignItems: "center",
   },
+
   textBackground: {
-    backgroundColor: "#006400", // Dark green background
+    backgroundColor: "#006400",
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 12,
     alignItems: "center",
   },
+
   title: {
     fontSize: 28,
     color: "#fff",
@@ -122,18 +126,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 5,
   },
+
   subtitle: {
     fontSize: 22,
     color: "#fff",
     textAlign: "center",
   },
+
+  // New center container
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   buttonWrapper: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: width * 0.7,
-    position: "absolute",
-    bottom: 120,
   },
+
   button: {
     backgroundColor: "#006400",
     width: 120,
@@ -142,6 +154,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
   },
+
   buttonText: {
     color: "#fff",
     fontSize: 22,

@@ -70,8 +70,8 @@
   "enter_land_size": "জমির পরিমান লিখুন",
   "enter_amount":"পরিমান লিখুন",
   "land_size":"জমির পরিমান",
-  "charge_per_decimal": "প্রতি শতাংশের মূল্য",
-  "charge_per_bigha": "প্রতি বিঘার মূল্য",
+  "charge_per_decimal": "প্রতি শতাংশ চাষের মূল্য",
+  "charge_per_bigha": "প্রতি বিঘা চাষের মূল্য",
   "hour": "ঘণ্টা",
   "login_to_app": "অ্যাপ এ লগইন করুন",
   "open_new_account": "নতুন অ্যাকাউন্ট খুলুন",
@@ -79,7 +79,19 @@
   "farmer": "কৃষক",
   "register_as": "রেজিস্ট্রেশান করুন:",
   "machine_calender":"মেশিন ক্যালেন্ডার",
-  "unit_of_charge_type": "জমির চার্জের ধরন"
+  "unit_of_charge_type": "জমির চার্জের ধরন",
+  "land_address": "জমির ঠিকানা",
+  "enter_address": "জমির ঠিকানা লিখুন",
+  "machine_picture_optional":"মেশিনের ছবি",
+  "machine_model":"মেশিনের মডেল",
+  "charge_per_hour":"প্রতি ঘণ্টা চাষের মূল্য",
+  "enter_machine_model":"মেশিনের মডেলের নাম লিখুন",
+  "select_image":"মেশিনের ছবি নির্বাচন করুন",
+  "model":"মডেল",
+  "hour_charge":"ঘণ্টা (চার্জ)",
+  "decimal_charge":"শতক (চার্জ)",
+  "bigha_charge":"বিঘা (চার্জ)",
+  "taka": "টাকা"
 
   
 

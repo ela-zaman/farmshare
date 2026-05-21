@@ -393,18 +393,9 @@ const fetchProviderImage = async () => {
 
       {/* INPUTS */}
       <Text style={styles.label}>{t("tillage_number")}</Text>
-      <TextInput style={styles.input} value={tillageAmount} onChangeText={setTillageAmount} keyboardType="numeric" placeholder={t("enter_amount")}/>
-      <Text style={styles.label}>{t("land_size")}</Text>
-      <TextInput style={styles.input} value={landSize} onChangeText={setLandSize} keyboardType="numeric" placeholder={t("enter_land_size")}/>
-      {/* Address */}
-<Text style={styles.label}>{t("land_address")}</Text>
-<TextInput
-  style={styles.input}
-  value={landAddress}
-  onChangeText={setLandAddress}
-  placeholder={t("enter_address")}
-/>
-
+      
+      <TextInput style={styles.input} value={tillageAmount} onChangeText={setTillageAmount} keyboardType="numeric" placeholder={t("enter_amount") } placeholderTextColor="blue"/>
+      
       <Text style={styles.label}>{t("unit_of_charge_type")}</Text>
       <View style={styles.picker}>
         <Picker selectedValue={selectedChargeType} onValueChange={setSelectedChargeType}>
@@ -412,6 +403,19 @@ const fetchProviderImage = async () => {
           <Picker.Item label={t("per_bigha")} value="per_bigha"/>
         </Picker>
       </View>
+      <Text style={styles.label}>{t("land_size")}</Text>
+      <TextInput placeholderTextColor="blue" style={styles.input} value={landSize} onChangeText={setLandSize} keyboardType="numeric" placeholder={t("enter_land_size")}/>
+      {/* Address */}
+<Text style={styles.label}>{t("land_address")}</Text>
+<TextInput
+  style={styles.input}
+  value={landAddress}
+  onChangeText={setLandAddress}
+  placeholder={t("enter_address")}
+  placeholderTextColor="blue"
+/>
+
+      
       <TillageTimeCalculator
   tillageAmount={tillageAmount}
   landSize={landSize}

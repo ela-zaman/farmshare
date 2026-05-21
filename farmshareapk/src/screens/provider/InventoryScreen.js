@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
   Image,
-  StyleSheet
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 
+import { useNavigation } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
+
+import { db, auth } from "../../firebase/firebaseConfig";
 import {
   collection,
   query,
@@ -15,17 +21,14 @@ import {
   onSnapshot
 } from "firebase/firestore";
 
-import { db, auth } from "../../firebase/firebaseConfig";
-import { useNavigation } from "@react-navigation/native";
-import { useTranslation } from "react-i18next";
-
 export default function InventoryScreen() {
   const [machines, setMachines] = useState([]);
   const navigation = useNavigation();
   const { t, i18n } = useTranslation();
+
   const isBn = i18n.language === "bn";
 
-  // 🔥 Fetch Machines
+  /* ================= FETCH ================= */
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -35,142 +38,182 @@ export default function InventoryScreen() {
       where("providerId", "==", user.uid)
     );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const machineList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setMachines(machineList);
-      },
-      (error) => console.log("Realtime error:", error)
-    );
+    const unsub = onSnapshot(q, (snap) => {
+      setMachines(
+        snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data()
+        }))
+      );
+    });
 
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // 🔥 Image Logic
-  const getMachineImage = (machineType) => {
-    if (!machineType) return require("../../../assets/images/add.png");
-    const type = machineType.toLowerCase();
-    if (type === "tractor") return require("../../../assets/images/Machines/tractor.png");
-    if (type === "powertiller") return require("../../../assets/images/Machines/powertiller.png");
-    if (type === "reaper") return require("../../../assets/images/Machines/reaper.png");
-    if (type === "sprayer") return require("../../../assets/images/Machines/sprayer.jpg");
-    if (type === "thresher") return require("../../../assets/images/Machines/thresher.png");
-    if (type === "combine harvester") return require("../../../assets/images/Machines/combine harvester.png");
-    if (type === "bed planter") return require("../../../assets/images/Machines/bed planter.png");
-    return require("../../../assets/images/add.png"); // fallback
-  };
-
-  // 🔥 Translate Machine Type
-  const getMachineTypeLabel = (type) => {
+  /* ================= NORMALIZE TYPE ================= */
+  const normalize = (type) => {
     if (!type) return "";
-    const key = type.toLowerCase().replace(/\s/g, "_");
-    return t(key);
+    return type.toLowerCase().replace(/[_-]/g, " ").trim();
   };
 
-  // 🔥 Convert number to Bangla digits
+  /* ================= IMAGE LOGIC ================= */
+  const getImage = (machine) => {
+    if (machine?.machineImage) {
+      return { uri: machine.machineImage };
+    }
+
+    const type = normalize(machine?.machineType);
+
+    if (type === "tractor")
+      return require("../../../assets/images/Machines/tractor.png");
+
+    if (type === "powertiller")
+      return require("../../../assets/images/Machines/powertiller.png");
+
+    if (type === "reaper")
+      return require("../../../assets/images/Machines/reaper.png");
+
+    if (type === "sprayer")
+      return require("../../../assets/images/Machines/sprayer.jpg");
+
+    if (type === "thresher")
+      return require("../../../assets/images/Machines/thresher.png");
+
+    if (type === "combine harvester")
+      return require("../../../assets/images/Machines/combine harvester.png");
+
+    if (type === "bed planter")
+      return require("../../../assets/images/Machines/bed planter.png");
+
+    return require("../../../assets/images/Machines/bed planter.png");
+  };
+
+  /* ================= BENGALI NUMBER CONVERTER ================= */
   const toBanglaNumber = (num) => {
-    if (!num && num !== 0) return t("not_specified");
-    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
-    return num.toString().split("").map(d => bn[d] ?? d).join("");
+    const bnDigits = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+
+    return num
+      .toString()
+      .split("")
+      .map((d) => (bnDigits[d] !== undefined ? bnDigits[d] : d))
+      .join("");
+  };
+
+  const formatCharge = (value) => {
+    if (value === null || value === undefined || value === "")
+      return t("not_specified");
+
+    const str = value.toString();
+    return isBn ? toBanglaNumber(str) : str;
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 120 }}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {machines.length === 0 ? (
-        <Text style={styles.emptyText}>{t("no_machines")}</Text>
-      ) : (
-        machines.map((machine) => (
-          <TouchableOpacity
-            key={machine.id}
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate("ProviderMachineDetails", { machineId: machine.id })
-            }
-          >
-            {/* Image */}
-            <Image
-              source={getMachineImage(machine.machineType)}
-              style={styles.image}
-            />
+      <ScrollView contentContainerStyle={styles.container}>
 
-            {/* Info */}
-            <View style={styles.info}>
-              {/* Machine Type (Translated) */}
-              <Text style={styles.machineType}>
-                {getMachineTypeLabel(machine.machineType)}
+        {/* HEADER */}
+        <Text style={styles.title}>
+          {t("choose_machine_to_edit")}
+        </Text>
+
+        {/* GRID */}
+        <View style={styles.grid}>
+          {machines.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.card}
+              onPress={() =>
+                navigation.navigate("ProviderMachineDetails", {
+                  machineId: item.id
+                })
+              }
+            >
+
+              {/* IMAGE */}
+              <Image source={getImage(item)} style={styles.image} />
+
+              {/* TYPE */}
+              <Text style={styles.type}>
+                {t(item.machineType)}
               </Text>
 
-              {/* Charge per Decimal */}
-              <Text style={styles.chargeInfo}>
-                {t("charge_per_decimal")}:{" "}
-                {isBn ? toBanglaNumber(machine.chargePerDecimal) : machine.chargePerDecimal ?? t("not_specified")}
+              {/* MODEL */}
+              <Text style={styles.text}>
+                {t("model")}: {item.machineModel}
               </Text>
 
-              {/* Charge per Bigha */}
-              <Text style={styles.chargeInfo}>
-                {t("charge_per_bigha")}:{" "}
-                {isBn ? toBanglaNumber(machine.chargePerBigha) : machine.chargePerBigha ?? t("not_specified")}
+              {/* CHARGES */}
+              <Text style={styles.text}>
+                {t("hour_charge")}: {formatCharge(item.chargePerHour)} {t("taka")}
               </Text>
-            </View>
-          </TouchableOpacity>
-        ))
-      )}
-    </ScrollView>
+
+              <Text style={styles.text}>
+                {t("decimal_charge")}: {formatCharge(item.chargePerDecimal)} {t("taka")}
+              </Text>
+
+              <Text style={styles.text}>
+                {t("bigha_charge")}: {formatCharge(item.chargePerBigha)} {t("taka")}
+              </Text>
+
+            </TouchableOpacity>
+          ))}
+        </View>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
+
   container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: "#f5f5f5",
+    padding: 12,
+    paddingBottom: 120
   },
 
-  emptyText: {
+  title: {
     textAlign: "center",
-    marginTop: 30,
-    fontSize: 16,
-    color: "#777"
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12
+  },
+
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between"
   },
 
   card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#d0e6ff",
-    padding: 12,
+    width: "48%",
+    backgroundColor: "#fff",
     borderRadius: 12,
+    padding: 10,
     marginBottom: 12,
-    elevation: 2
+    elevation: 3
   },
 
   image: {
-    width: 60,
-    height: 60,
-    resizeMode: "contain",
-    marginRight: 12,
+    width: "100%",
+    height: 110,
+    borderRadius: 10,
+    marginBottom: 8,
+    resizeMode: "cover"
   },
 
-  info: {
-    flex: 1,
-  },
-
-  machineType: {
-    fontSize: 16,
+  type: {
     fontWeight: "bold",
-    color: "#666",
-    marginBottom: 4
+    marginBottom: 4,
+    textAlign: "center"
   },
 
-  chargeInfo: {
-    fontSize: 14,
+  text: {
+    fontSize: 12,
     color: "#444",
     marginBottom: 2
-  },
+  }
 });

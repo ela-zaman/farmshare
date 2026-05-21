@@ -81,7 +81,19 @@
   "select_role": "Select Your Role",
   "farmer": "Farmer",
   "register_as": "Register As:",
-  "machine_calender":"Machine Calender"
+  "machine_calender":"Machine Calender",
+  "land_address": "Land Address",
+  "enter_address": "Enter Address",
+  "machine_picture_optional":"Machine Picture",
+  "machine_model":"Machine Model",
+  "charge_per_hour":"Charge Per Hour",
+  "enter_machine_model":"Enter Machine Model",
+  "select_image":"Select Machinery Image",
+  "model":"Model",
+  "hour_charge":"Hour (Charge)",
+  "decimal_charge":"Decimal (Charge)",
+  "bigha_charge":"Bigha (Charge)",
+  "taka": "Taka"
   
  
 
