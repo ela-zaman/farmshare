@@ -66,12 +66,7 @@ export default function ProviderMyContact({ navigation }) {
   };
 
   /* ================= MESSAGE ================= */
-  const handleMessage = (item) => {
-    navigation.navigate("ChatScreen", {
-      userId: item.userId,
-      userName: item.name,
-    });
-  };
+ 
 
   /* ================= IMAGE ================= */
   const getImage = (photo) =>
@@ -106,14 +101,7 @@ export default function ProviderMyContact({ navigation }) {
           <Text style={styles.iconText}>{t("call")}</Text>
         </TouchableOpacity>
 
-        {/* MESSAGE BUTTON */}
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: "#1565C0" }]}
-          onPress={() => handleMessage(item)}
-        >
-          <Ionicons name="chatbubble" size={18} color="#fff" />
-          <Text style={styles.iconText}>{t("message")}</Text>
-        </TouchableOpacity>
+      
 
       </View>
     </View>

@@ -23,6 +23,7 @@ import ProviderProfileScreen from "../screens/provider/ProviderProfileScreen";
 import { logoutUser } from "../firebase/authService";
 import MachineStatus from "../screens/provider/MachineStatus";
 import ProviderMessages from "../screens/provider/ProviderMessages";
+import ProviderChatScreen from "../screens/provider/ProviderChatScreen";
 
 
 const Tab = createBottomTabNavigator();
@@ -41,6 +42,7 @@ function HomeStack() {
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
       <Stack.Screen name="ProviderBookingRequests" component={ProviderBookingRequests} />
       <Stack.Screen name="ProviderMessages" component={ProviderMessages} />
+      <Stack.Screen name="ProviderChatScreen" component={ProviderChatScreen}/>
 
       {/* ✅ Shared Screens */}
       <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
