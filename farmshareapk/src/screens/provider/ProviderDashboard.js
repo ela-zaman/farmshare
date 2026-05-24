@@ -20,11 +20,16 @@ export default function ProviderDashboard({ navigation }) {
 
   return (
     <ImageBackground
-      source={require("../../../assets/images/background6.png")} // background image
+      source={require("../../../assets/images/background6.png")}
       style={styles.background}
       resizeMode="cover"
     >
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: 150 }
+        ]}
+      >
 
         {/* CURRENT STATUS CARD */}
         <TouchableOpacity
@@ -98,18 +103,31 @@ export default function ProviderDashboard({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* CARD BUTTON BELOW GRID */}
-        <View style={{ marginBottom: 20 }}>
+        {/* ROW 3 */}
+        <View style={styles.row}>
           <TouchableOpacity
-            style={styles.cardButton}
+            style={styles.button}
             onPress={() => navigation.navigate("ProviderBookingRequests")}
           >
             <Image
               source={require("../../../assets/Dashboard/inventory.jpg")}
-              style={styles.cardIcon}
+              style={styles.icon}
               resizeMode="contain"
             />
-            <Text style={styles.cardLabel}>{t("booking_requests")}</Text>
+            <Text style={styles.label}>{t("booking_requests")}</Text>
+          </TouchableOpacity>
+
+          {/* MY MESSAGES */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("ProviderMessages")}
+          >
+            <Image
+              source={require("../../../assets/images/Dashboard/Current Status.png")}
+              style={styles.icon}
+              resizeMode="contain"
+            />
+            <Text style={styles.label}>{t("my_messages")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -118,17 +136,21 @@ export default function ProviderDashboard({ navigation }) {
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
 
   background: {
     flex: 1
   },
 
+  /* ✅ CENTER EVERYTHING */
   container: {
-    padding: 15
+    padding: 15,
+    flexGrow: 1,
+    justifyContent: "center",   // vertical center
+    alignItems: "center"        // horizontal center
   },
 
-  /* STATUS CARD */
   statusCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -136,11 +158,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 25,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 4
+    elevation: 4,
+    width: "100%"
   },
 
   statusImage: {
@@ -160,11 +179,11 @@ const styles = StyleSheet.create({
     marginTop: 4
   },
 
-  /* GRID */
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20
+    marginBottom: 20,
+    width: "100%"
   },
 
   button: {
@@ -174,10 +193,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
     elevation: 3
   },
 
@@ -191,32 +206,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     textAlign: "center"
-  },
-
-  /* CARD BUTTON BELOW GRID */
-  cardButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ADD8E6",
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 4
-  },
-
-  cardIcon: {
-    width: 50,
-    height: 50,
-    marginRight: 15
-  },
-
-  cardLabel: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000"
   }
-
 });

@@ -32,6 +32,7 @@ import MyBookingScreen from "../screens/farmer/MyBookingScreen";
 import BookedMachine from "../screens/farmer/BookedMachine";
 import FarmerMyContact from "../screens/farmer/FarmerMyContact"
 import FarmerBottomTabNavigator from "./FarmerBottomTabNavigator";
+import ProviderMessages from "../screens/provider/ProviderMessages"
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -78,6 +79,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ProviderMachineDetails" component={ProviderMachineDetails} />
       <Stack.Screen name="ProviderEditMachine" component={ProviderEditMachine} />
      <Stack.Screen name="ProviderBookingRequests" component={ProviderBookingRequests} />
+     <Stack.Screen name="ProviderMessages" component={ProviderMessages} />
       
   <Stack.Screen name="SearchScreen" component={SearchScreen} />
    <Stack.Screen name="SearchResult" component={SearchResult} />

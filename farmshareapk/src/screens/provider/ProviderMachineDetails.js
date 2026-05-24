@@ -140,7 +140,7 @@ export default function ProviderMachineDetails() {
 
   return (
     <LinearGradient colors={["#e8f5e9", "#f5f5f5"]} style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 300 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
 
         {/* IMAGE */}
         <View style={styles.imageCard}>

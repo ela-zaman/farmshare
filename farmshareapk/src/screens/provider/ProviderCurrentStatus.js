@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 
 import { collection, query, where, onSnapshot } from "firebase/firestore";
@@ -16,31 +16,37 @@ import { useTranslation } from "react-i18next";
 export default function ProviderCurrentStatus() {
   const [machines, setMachines] = useState([]);
   const navigation = useNavigation();
-  const { t, i18n } = useTranslation();
-  const isBn = i18n.language === "bn";
+  const { t } = useTranslation();
 
-  // Fetch Machines
+  /* ================= FETCH ================= */
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const q = query(collection(db, "machines"), where("providerId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const machineList = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setMachines(machineList);
+    const q = query(
+      collection(db, "machines"),
+      where("providerId", "==", user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMachines(
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+      );
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Get local image for machine type
-  const getMachineImage = (machineType) => {
-    if (!machineType) return require("../../../assets/images/add.png");
-    const type = machineType.toLowerCase();
-    switch (type) {
+  /* ================= MACHINE LOCAL IMAGE ================= */
+  const getMachineImage = (type) => {
+    if (!type) return require("../../../assets/images/add.png");
+
+    const t = type.toLowerCase();
+
+    switch (t) {
       case "tractor":
         return require("../../../assets/images/Machines/tractor.png");
       case "powertiller":
@@ -60,75 +66,105 @@ export default function ProviderCurrentStatus() {
     }
   };
 
-  // Translate machine type
-  const getMachineTypeLabel = (type) => {
-    if (!type) return "";
-    const key = type.toLowerCase().replace(/\s/g, "_");
-    return t(key);
+  /* ================= CLOUDINARY IMAGE HANDLING ================= */
+  const getMachineCloudImage = (url) => {
+    if (url && url.length > 0) {
+      return { uri: url };
+    }
+    return null;
+  };
+
+  /* ================= RENDER CARD ================= */
+  const renderCard = (machine) => {
+    const cloudImage = getMachineCloudImage(machine.machineImage);
+    const localImage = getMachineImage(machine.machineType);
+
+    return (
+      <TouchableOpacity
+        key={machine.id}
+        style={styles.card}
+        onPress={() =>
+          navigation.navigate("MachineStatus", {
+            machineId: machine.id,
+            machineType: machine.machineType,
+          })
+        }
+      >
+        {/* IMAGE TOP */}
+        <View style={styles.imageContainer}>
+          <Image
+            source={cloudImage || localImage}
+            style={styles.image}
+          />
+        </View>
+
+        {/* MACHINE TYPE BOTTOM CENTER */}
+        <View style={styles.bottomBox}>
+          <Text style={styles.machineType}>
+            {t(machine.machineType)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView contentContainerStyle={styles.container}>
       {machines.length === 0 ? (
         <Text style={styles.emptyText}>{t("no_machines")}</Text>
       ) : (
-        machines.map((machine) => (
-          <TouchableOpacity
-            key={machine.id}
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate("MachineStatus", { machineId: machine.id, machineType:machine.machineType})
-            }
-          >
-            {/* Machine Image */}
-            <Image source={getMachineImage(machine.machineType)} style={styles.image} />
-
-            {/* Machine Type */}
-            <View style={styles.info}>
-              <Text style={styles.machineType}>
-                {getMachineTypeLabel(machine.machineType)}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))
+        machines.map(renderCard)
       )}
     </ScrollView>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 10,
+    padding: 12,
+    paddingBottom: 120,
     backgroundColor: "#f5f5f5",
   },
+
   emptyText: {
     textAlign: "center",
     marginTop: 30,
     fontSize: 16,
     color: "#777",
   },
+
+  /* GREEN GRADIENT LOOK */
   card: {
-    flexDirection: "row",
+    borderRadius: 18,
+    marginBottom: 15,
+    overflow: "hidden",
+    backgroundColor: "#dff5e1",
+    elevation: 4,
+  },
+
+  imageContainer: {
+    backgroundColor: "#c8e6c9",
+    padding: 10,
     alignItems: "center",
-    backgroundColor: "#d0e6ff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
   },
+
   image: {
-    width: 60,
-    height: 60,
+    width: "100%",
+    height: 140,
     resizeMode: "contain",
-    marginRight: 12,
   },
-  info: {
-    flex: 1,
+
+  bottomBox: {
+    paddingVertical: 10,
+    backgroundColor: "#2e7d32",
+    alignItems: "center",
   },
+
   machineType: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-    color: "#666",
+    textTransform: "capitalize",
   },
 });
