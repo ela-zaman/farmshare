@@ -35,7 +35,7 @@ function HomeStack() {
       <Stack.Screen name="ProviderDashboard" component={ProviderDashboard} />
       <Stack.Screen name="AddMachinery" component={AddMachineScreen} />
       <Stack.Screen name="ProviderNotification" component={ProviderNotificationScreen} />
-      <Stack.Screen name="ProviderBookings" component={ProviderBookingScreen} />
+      <Stack.Screen name="ProviderBookingScreen" component={ProviderBookingScreen} />
       <Stack.Screen name="ProviderCurrentStatus" component={ProviderCurrentStatus} />
       <Stack.Screen name="ProviderMyContact" component={ProviderMyContact} />
       <Stack.Screen name="ProviderBookingRequests" component={ProviderBookingRequests} />
