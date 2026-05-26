@@ -93,7 +93,16 @@
   "hour_charge":"Hour (Charge)",
   "decimal_charge":"Decimal (Charge)",
   "bigha_charge":"Bigha (Charge)",
-  "taka": "Taka"
+  "taka": "Taka",
+  "morning":"Morning",
+  "noon":"Noon",
+  "Afternoon":"Afternoon",
+  "night":"Night",
+  "dates": "Date",
+  "time_slot": "Time Schedule",
+   "new_booking_request": "New Booking Request",
+  "you_have_new_request": "You have received a new booking request",
+  "unknown": "Unknown"
   
  
 

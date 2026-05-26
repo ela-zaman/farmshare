@@ -3,11 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  Button,
   Image,
-  ImageBackground,
   Alert,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
 
 import { useTranslation } from "react-i18next";
@@ -18,21 +17,46 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
+
+import {
+  Ionicons,
+  MaterialIcons,
+  FontAwesome5,
+} from "@expo/vector-icons";
+
+import { LinearGradient } from "expo-linear-gradient";
 
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
+
+/* ================= BANGLA DIGITS ================= */
+const BN_DIGITS = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+
+const toBanglaNumber = (num) =>
+  num?.toString().split("").map(d => BN_DIGITS[d] || d).join("");
+
+/* ================= MONTH TRANSLATION ================= */
+const MONTHS = {
+  en: [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ],
+  bn: [
+    "জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন",
+    "জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"
+  ],
+};
 
 export default function ProviderBookingRequests() {
   const { t, i18n } = useTranslation();
   const [requests, setRequests] = useState([]);
 
-  const auth = getAuth();
-  const provider = auth.currentUser;
-
+  const provider = getAuth().currentUser;
   const isBn = i18n.language === "bn";
 
-  /* ================= LOAD ================= */
+  /* ================= FETCH ================= */
   useEffect(() => {
     if (!provider) return;
 
@@ -42,175 +66,162 @@ export default function ProviderBookingRequests() {
       where("status", "==", "pending")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const result = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
+    const unsub = onSnapshot(q, async (snapshot) => {
+      const raw = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
       }));
-      setRequests(result);
+
+      const enriched = await Promise.all(
+        raw.map(async (item) => {
+          let userData = {};
+          let machineData = {};
+
+          if (item.userId) {
+            const u = await getDoc(doc(db, "users", item.userId));
+            if (u.exists()) userData = u.data();
+          }
+
+          if (item.machineId) {
+            const m = await getDoc(doc(db, "machines", item.machineId));
+            if (m.exists()) machineData = m.data();
+          }
+
+          return {
+            ...item,
+            userName: userData.name || "Unknown",
+            userPhone: userData.phone || "",
+            userPhoto: userData.photo || null,
+            machineImage: machineData.machineImage || null,
+          };
+        })
+      );
+
+      setRequests(enriched);
     });
 
-    return () => unsubscribe();
-  }, [provider]);
+    return () => unsub();
+  }, []);
 
-  /* ================= BANGLA NUMBER ================= */
-  const toBanglaNumber = (num) => {
-    if (num === null || num === undefined) return "০";
-    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
-    return num.toString().split("").map(d => bn[d] || d).join("");
+  /* ================= DATE FORMAT (FULL MULTILINGUAL) ================= */
+  const formatDate = (date) => {
+    const d = new Date(date);
+
+    const day = isBn ? toBanglaNumber(d.getDate()) : d.getDate();
+    const year = isBn ? toBanglaNumber(d.getFullYear()) : d.getFullYear();
+
+    const month = isBn
+      ? MONTHS.bn[d.getMonth()]
+      : MONTHS.en[d.getMonth()];
+
+    return `${day} ${month} ${year}`;
   };
 
-  /* ================= CALC ================= */
-  const calculateTotalCharge = (item) => {
-    const landSize = parseFloat(item.landSize) || 0;
-    const tillageAmount = parseFloat(item.tillageAmount) || 0;
-    const chargePerDecimal = parseFloat(item.chargePerDecimal) || 0;
-    const chargePerBigha = parseFloat(item.chargePerBigha) || 0;
+  /* ================= TIME SLOT FORMAT ================= */
+  const formatTime = (val) =>
+    isBn ? toBanglaNumber(val) : val;
 
-    return item.chargeType === "per_decimal"
-      ? chargePerDecimal * landSize * tillageAmount
-      : chargePerBigha * landSize * tillageAmount;
-  };
+/* morning/noon label */
+  const getSlotName = (slot) => {
+    const start = parseInt(slot.split("-")[0]);
 
-  const calculateTotalHours = (item) => item.slots?.length || 0;
-
-  const formatSlots = (slots) => {
-    if (!slots?.length) return t("no_slots");
-
-    return slots
-      .map((s) => {
-        const parts = s.split("-");
-        const start = isBn ? toBanglaNumber(parts[0]) : parts[0];
-        const end = isBn ? toBanglaNumber(parts[1]) : parts[1];
-        return `${start}:00 - ${end}:00`;
-      })
-      .join(", ");
-  };
-
-  /* ================= MACHINE IMAGE ================= */
-  const getMachineImage = (type) => {
-    if (!type) return require("../../../assets/images/add.png");
-
-    const key = type.toLowerCase().trim().replace(/\s/g, "_");
-
-    const IMAGE_MAP = {
-      tractor: require("../../../assets/images/Machines/tractor.png"),
-      powertiller: require("../../../assets/images/Machines/powertiller.png"),
-      reaper: require("../../../assets/images/Machines/reaper.png"),
-      bed_planter: require("../../../assets/images/Machines/bed planter.png"),
-      combine_harvester: require("../../../assets/images/Machines/combine harvester.png"),
-      thresher: require("../../../assets/images/Machines/thresher.png"),
-      sprayer: require("../../../assets/images/Machines/sprayer.jpg"),
-    };
-
-    return IMAGE_MAP[key] || require("../../../assets/images/add.png");
+    if (start < 12) return t("morning");
+    if (start < 15) return t("noon");
+    if (start < 18) return t("afternoon");
+    return t("night");
   };
 
   /* ================= ACTION ================= */
-  const handleDecision = async (id, decision) => {
-    try {
-      await updateDoc(doc(db, "bookings", id), { status: decision });
-
-      Alert.alert(
-        t("success"),
-        decision === "accepted"
-          ? t("booking_accepted")
-          : t("booking_denied")
-      );
-    } catch (err) {
-      console.log(err);
-      Alert.alert(t("error"), t("update_failed"));
-    }
+  const handleDecision = async (id, status) => {
+    await updateDoc(doc(db, "bookings", id), { status });
+    Alert.alert(t("success"));
   };
 
   /* ================= CARD ================= */
-  const renderCard = (item) => {
-    const totalCharge = calculateTotalCharge(item);
-    const totalHours = calculateTotalHours(item);
-
-    const formattedDates = item.dates
-      ?.map((d) => (isBn ? toBanglaNumber(d) : d))
-      .join(", ");
-
-    return (
-      <ImageBackground
-        key={item.id}
-        source={require("../../../assets/images/background6.png")}
-        style={styles.card}
-        imageStyle={{ borderRadius: 12 }}
-      >
+  const renderCard = (item) => (
+    <LinearGradient
+      key={item.id}
+      colors={["#FDE2FF", "#D6EEFF"]}
+      style={styles.card}
+    >
+      <View style={styles.imageWrap}>
         <Image
-          source={getMachineImage(item.machineType)}
-          style={styles.image}
+          source={
+            item.machineImage
+              ? { uri: item.machineImage }
+              : require("../../../assets/images/add.png")
+          }
+          style={styles.machineImage}
         />
 
-        <Text style={styles.title}>
-          {t(item.machineType)}
-        </Text>
+        <Image
+          source={
+            item.userPhoto
+              ? { uri: item.userPhoto }
+              : require("../../../assets/images/add.png")
+          }
+          style={styles.userImage}
+        />
+      </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.text}>
-            {t("farmer_name")}: {item.userName}
-          </Text>
+      <Text style={styles.title}>{t(item.machineType)}</Text>
 
-          <Text style={styles.text}>
-            {t("phone")}: {item.userPhone}
-          </Text>
+      {/* USER INFO */}
+      <Text style={styles.text}>👤 {t("farmer_name")}: {item.userName}</Text>
+      <Text style={styles.text}>📞 {t("phone")}: {item.userPhone}</Text>
 
-          <Text style={styles.text}>
-            {t("address")}: {item.address}
-          </Text>
+      {/* DATE (MULTILINGUAL FIXED) */}
+      <Text style={styles.text}>
+        📅 {t("dates")}:{" "}
+        {item.dates?.map((d) => formatDate(d)).join(", ")}
+      </Text>
 
-          <Text style={styles.text}>
-            {t("land_address")}: {item.landAddress}
-          </Text>
+      {/* TIME SLOT */}
+      <Text style={styles.slotTitle}>⏰ {t("time_slot")}</Text>
 
-          <Text style={styles.text}>
-            {t("total_taka")}:{" "}
-            {isBn
-              ? toBanglaNumber(totalCharge.toFixed(2))
-              : totalCharge.toFixed(2)}
-          </Text>
+      <View style={styles.slotWrap}>
+        {item.slots?.map((slot, index) => {
+          const [start, end] = slot.split("-");
 
-          <Text style={styles.text}>
-            {t("dates")}: {formattedDates}
-          </Text>
+          return (
+            <LinearGradient
+              key={index}
+              colors={["#A8D8FF", "#FFC6E6"]}
+              style={styles.slotBorder}
+            >
+              <View style={styles.slotCard}>
+                <Text style={styles.slotText}>
+                  {getSlotName(slot)}{" "}
+                  {formatTime(start)}:00 - {formatTime(end)}:00
+                </Text>
+              </View>
+            </LinearGradient>
+          );
+        })}
+      </View>
 
-          <Text style={styles.text}>
-            {t("time_slots")}: {formatSlots(item.slots)}
-          </Text>
+      {/* BUTTONS */}
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={styles.accept}
+          onPress={() => handleDecision(item.id, "accepted")}
+        >
+          <Text style={styles.btnText}>✅ {t("accept")}</Text>
+        </TouchableOpacity>
 
-          <Text style={styles.text}>
-            {t("total_hours")}:{" "}
-            {isBn ? toBanglaNumber(totalHours) : totalHours}
-          </Text>
-
-          <View style={styles.buttonRow}>
-            <Button
-              title={t("accept")}
-              onPress={() => handleDecision(item.id, "accepted")}
-            />
-            <View style={{ width: 10 }} />
-            <Button
-              title={t("deny")}
-              color="red"
-              onPress={() => handleDecision(item.id, "denied")}
-            />
-          </View>
-        </View>
-      </ImageBackground>
-    );
-  };
+        <TouchableOpacity
+          style={styles.deny}
+          onPress={() => handleDecision(item.id, "denied")}
+        >
+          <Text style={styles.btnText}>❌ {t("deny")}</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {requests.length === 0 ? (
-        <View style={styles.center}>
-          <Text>{t("no_requests")}</Text>
-        </View>
-      ) : (
-        requests.map(renderCard)
-      )}
+      {requests.map(renderCard)}
     </ScrollView>
   );
 }
@@ -223,49 +234,102 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 15,
-    alignItems: "center",
-    elevation: 3,
+    padding: 15,
+    borderRadius: 25,
+    marginBottom: 25,
   },
 
-  image: {
-    width: 120,
+  imageWrap: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  machineImage: {
+    width: 170,
     height: 120,
-    resizeMode: "contain",
-    marginBottom: 10,
+    borderRadius: 15,
+  },
+
+  userImage: {
+    width: 65,
+    height: 65,
+    borderRadius: 35,
+    position: "absolute",
+    bottom: -18,
+    right: 80,
+    borderWidth: 3,
+    borderColor: "#fff",
   },
 
   title: {
     fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 10,
-    color: "navy",
+    fontWeight: "bold",
+    color: "#0D47A1",
     textAlign: "center",
-  },
-
-  infoBox: {
-    width: "100%",
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.75)",
+    marginBottom: 15,
   },
 
   text: {
+    color: "#0D47A1",
+    fontWeight: "600",
+    marginBottom: 5,
+  },
+
+  slotTitle: {
+    marginTop: 12,
     fontWeight: "bold",
-    color: "navy",
-    marginBottom: 4,
+    color: "#0D47A1",
+  },
+
+  slotWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+
+  slotBorder: {
+    padding: 1.5,
+    borderRadius: 15,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  slotCard: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+
+  slotText: {
+    fontWeight: "bold",
+    color: "#0D47A1",
   },
 
   buttonRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 10,
+    marginTop: 15,
   },
 
-  center: {
+  accept: {
+    flex: 1,
+    backgroundColor: "#2E7D32",
+    padding: 12,
+    borderRadius: 15,
+    marginRight: 5,
     alignItems: "center",
-    marginTop: 50,
+  },
+
+  deny: {
+    flex: 1,
+    backgroundColor: "#E53935",
+    padding: 12,
+    borderRadius: 15,
+    marginLeft: 5,
+    alignItems: "center",
+  },
+
+  btnText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

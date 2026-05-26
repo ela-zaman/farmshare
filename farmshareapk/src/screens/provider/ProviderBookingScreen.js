@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 
 import { useTranslation } from "react-i18next";
@@ -17,8 +16,6 @@ import {
   getDocs,
   getDoc,
   doc,
-  addDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 
 import {
@@ -30,109 +27,148 @@ import {
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
 
+/* ================= MULTILINGUAL HELPERS ================= */
+const BN_DIGITS = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+
+const toBnNumber = (num) =>
+  String(num).split("").map(d => BN_DIGITS[d] || d).join("");
+
+const MONTHS = {
+  en: [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ],
+  bn: [
+    "জানুয়ারী","ফেব্রুয়ারী","মার্চ","এপ্রিল","মে","জুন",
+    "জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"
+  ],
+};
+
 export default function ProviderBookingScreen({ navigation }) {
   const { t, i18n } = useTranslation();
+
   const [bookings, setBookings] = useState([]);
-  const [filter, setFilter] = useState("current");
+  const [filter, setFilter] = useState("all");
 
   const provider = getAuth().currentUser;
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const isBn = i18n.language === "bn";
+  /* ================= DATE LOGIC ================= */
+  const normalizeDates = (dates) =>
+    Array.isArray(dates) ? dates : dates ? [dates] : [];
 
-  // ================= SAFE NORMALIZER =================
-  const normalizeDates = (dates) => {
-    if (!dates) return [];
-    if (Array.isArray(dates)) return dates;
-    return [dates]; // fix string → array
+  const isExpired = (dates) =>
+    normalizeDates(dates).every((d) => d < todayStr);
+
+  const isCurrent = (dates) =>
+    normalizeDates(dates).some((d) => d >= todayStr);
+
+  /* ================= DATE FORMAT ================= */
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr);
+
+    const lang = i18n.language === "bn" ? "bn" : "en";
+
+    const day =
+      i18n.language === "bn"
+        ? toBnNumber(d.getDate())
+        : d.getDate();
+
+    const year =
+      i18n.language === "bn"
+        ? toBnNumber(d.getFullYear())
+        : d.getFullYear();
+
+    const month = MONTHS[lang][d.getMonth()];
+
+    return `${day} ${month} ${year}`;
   };
 
-  // ================= DATE CHECK (FIXED) =================
-  const isExpired = (dates) => {
-    const list = normalizeDates(dates);
-    return list.every((d) => d < todayStr);
+  /* ================= IMAGE ================= */
+  const getMachineImage = (machine) => {
+    if (machine?.machineImage)
+      return { uri: machine.machineImage };
+
+    const type = (machine?.machineType || "").toLowerCase();
+
+    if (type === "tractor")
+      return require("../../../assets/images/Machines/tractor.png");
+    if (type === "powertiller")
+      return require("../../../assets/images/Machines/powertiller.png");
+    if (type === "reaper")
+      return require("../../../assets/images/Machines/reaper.png");
+    if (type === "sprayer")
+      return require("../../../assets/images/Machines/sprayer.jpg");
+    if (type === "thresher")
+      return require("../../../assets/images/Machines/thresher.png");
+    if (type === "combine harvester")
+      return require("../../../assets/images/Machines/combine harvester.png");
+
+    return require("../../../assets/images/Machines/tractor.png");
   };
 
-  const isCurrent = (dates) => {
-    const list = normalizeDates(dates);
-    return list.some((d) => d >= todayStr);
-  };
+  const getUserImage = (uri) =>
+    uri ? { uri } : require("../../../assets/images/add.png");
 
-  // ================= ADD CONTACT =================
-  const handleAddContact = async (item) => {
-    try {
-      await addDoc(collection(db, "contacts"), {
-        providerId: provider.uid,
-        userId: item.userId,
-        name: item.userName,
-        phone: item.userPhone,
-        address: item.landAddress || "",
-        machineType: item.machineType || "",
-        createdAt: serverTimestamp(),
-      });
-
-      Alert.alert(t("success"), t("contact_saved"));
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  // ================= CHAT SCREEN =================
-  const handleContactNow = (item) => {
-    navigation.navigate("ChatScreen", {
-      userId: item.userId,
-      userName: item.userName,
-    });
-  };
-
-  // ================= FETCH BOOKINGS =================
+  /* ================= FETCH ================= */
   useEffect(() => {
-    if (provider) fetchBookings();
+    if (!provider) return;
+
+    const fetchBookings = async () => {
+      const q = query(
+        collection(db, "bookings"),
+        where("providerId", "==", provider.uid),
+        where("status", "==", "accepted")
+      );
+
+      const snap = await getDocs(q);
+
+      const raw = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
+      const users = {};
+      const machines = {};
+
+      await Promise.all(
+        raw.map(async (b) => {
+          if (b.userId && !users[b.userId]) {
+            const u = await getDoc(doc(db, "users", b.userId));
+            if (u.exists()) users[b.userId] = u.data();
+          }
+
+          if (b.machineId && !machines[b.machineId]) {
+            const m = await getDoc(doc(db, "machines", b.machineId));
+            if (m.exists()) machines[b.machineId] = m.data();
+          }
+        })
+      );
+
+      const merged = raw.map((b) => ({
+        ...b,
+        userName: users[b.userId]?.name || "Unknown",
+        userPhone: users[b.userId]?.phone || "N/A",
+        userPhoto: users[b.userId]?.photo || null,
+        machineImage: machines[b.machineId]?.machineImage || null,
+      }));
+
+      setBookings(merged);
+    };
+
+    fetchBookings();
   }, [provider]);
 
-  const fetchBookings = async () => {
-    const q = query(
-      collection(db, "bookings"),
-      where("providerId", "==", provider.uid),
-      where("status", "==", "accepted")
-    );
-
-    const snap = await getDocs(q);
-
-    const raw = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
-
-    // fetch user info
-    const users = {};
-
-    await Promise.all(
-      raw.map(async (b) => {
-        if (b.userId) {
-          const u = await getDoc(doc(db, "users", b.userId));
-          if (u.exists()) users[b.userId] = u.data();
-        }
-      })
-    );
-
-    const merged = raw.map((b) => ({
-      ...b,
-      userName: users[b.userId]?.name || "Unknown",
-      userPhone: users[b.userId]?.phone || "N/A",
-      userPhoto: users[b.userId]?.photo || null,
-    }));
-
-    setBookings(merged);
-  };
-
-  // ================= FILTER =================
-  const filteredBookings = useMemo(() => {
+  /* ================= SORT LATEST → OLDEST ================= */
+  const sortedBookings = useMemo(() => {
     let data = [...bookings];
 
-    if (filter === "current") data = data.filter((b) => isCurrent(b.dates));
-    if (filter === "expired") data = data.filter((b) => isExpired(b.dates));
+    if (filter === "current")
+      data = data.filter((b) => isCurrent(b.dates));
+
+    if (filter === "expired")
+      data = data.filter((b) => isExpired(b.dates));
 
     return data.sort(
       (a, b) =>
@@ -140,19 +176,33 @@ export default function ProviderBookingScreen({ navigation }) {
     );
   }, [bookings, filter]);
 
-  // ================= IMAGE =================
-  const img = (uri) =>
-    uri ? { uri } : require("../../../assets/images/add.png");
-
-  // ================= DATE FORMAT =================
-  const formatDate = (dateString) => {
-    const d = new Date(dateString);
-    return `${d.getDate()} ${d.toLocaleString("default", {
-      month: "long",
-    })} ${d.getFullYear()}`;
+  /* ================= TIME SLOT ================= */
+  const getSlotLabel = (hour) => {
+    if (hour >= 5 && hour < 11) return t("morning");
+    if (hour >= 11 && hour < 15) return t("noon");
+    if (hour >= 15 && hour < 19) return t("afternoon");
+    return t("night");
   };
 
-  // ================= CARD =================
+  const formatSlots = (slots = []) =>
+    slots.map((s, i) => {
+      const [start, end] = s.split("-").map(Number);
+
+      const label =
+        `${getSlotLabel(start)} ` +
+        `${i18n.language === "bn"
+          ? toBnNumber(start)
+          : start
+        }:00 - ` +
+        `${i18n.language === "bn"
+          ? toBnNumber(end)
+          : end
+        }:00`;
+
+      return { id: i, label };
+    });
+
+  /* ================= RENDER ================= */
   const renderItem = ({ item }) => {
     const expired = isExpired(item.dates);
 
@@ -164,54 +214,51 @@ export default function ProviderBookingScreen({ navigation }) {
         ]}
       >
         {/* IMAGES */}
-        <View style={styles.imageRow}>
-          <Image source={img(item.userPhoto)} style={styles.farmerImg} />
-          <Image source={img(item.machineImage)} style={styles.machineImg} />
+        <View style={styles.imageWrap}>
+          <Image
+            source={getMachineImage(item)}
+            style={styles.machineImg}
+          />
+          <Image
+            source={getUserImage(item.userPhoto)}
+            style={styles.userImg}
+          />
         </View>
 
-        {/* MACHINE */}
-        <Text style={styles.title}>{t(item.machineType)}</Text>
+        {/* TEXT */}
+        <Text style={styles.title}>
+          {t(item.machineType)}
+        </Text>
 
-        {/* INFO */}
-        <View style={styles.infoBox}>
-          <Text style={styles.row}>
-            <FontAwesome5 name="user-circle" size={14} />{" "}
-            {t("farmer_name")}: {item.userName}
-          </Text>
+        <Text style={styles.text}>
+          <FontAwesome5 name="user-circle" /> {t("farmer_name")}: {item.userName}
+        </Text>
 
-          <Text style={styles.row}>
-            <Ionicons name="call" size={14} />{" "}
-            {t("phone")}: {item.userPhone}
-          </Text>
+        <Text style={styles.text}>
+          <Ionicons name="call" /> {t("phone")}: {item.userPhone}
+        </Text>
 
-          <Text style={styles.row}>
-            <MaterialIcons name="location-on" size={15} />{" "}
-            {t("land_address")}: {item.landAddress}
-          </Text>
+        <Text style={styles.text}>
+          <MaterialIcons name="location-on" /> {t("land_address")}: {item.landAddress}
+        </Text>
 
-          <Text style={styles.row}>
-            <Ionicons name="calendar" size={15} />{" "}
-            {t("dates")}: {normalizeDates(item.dates).join(", ")}
-          </Text>
-        </View>
+        <Text style={styles.text}>
+          📅 {t("dates")}:{" "}
+          {normalizeDates(item.dates).map(formatDate).join(", ")}
+        </Text>
 
-        {/* BUTTONS */}
-        <View style={styles.btnRow}>
-          <TouchableOpacity
-            style={styles.contactBtn}
-            onPress={() => handleAddContact(item)}
-          >
-            <Ionicons name="person-add" size={16} color="#fff" />
-            <Text style={styles.btnText}>{t("add_contact")}</Text>
-          </TouchableOpacity>
+        {/* TIME SLOT */}
+        <Text style={styles.slotTitle}>
+          ⏰ {t("time_slot")}
+        </Text>
 
-          <TouchableOpacity
-            style={styles.chatBtn}
-            onPress={() => handleContactNow(item)}
-          >
-            <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
-            <Text style={styles.btnText}>{t("contact_now")}</Text>
-          </TouchableOpacity>
+        {/* SLOT CARDS */}
+        <View style={styles.slotGrid}>
+          {formatSlots(item.slots).map((slot) => (
+            <View key={slot.id} style={styles.slotCard}>
+              <Text style={styles.slotText}>{slot.label}</Text>
+            </View>
+          ))}
         </View>
       </View>
     );
@@ -221,13 +268,13 @@ export default function ProviderBookingScreen({ navigation }) {
     <View style={{ flex: 1 }}>
       {/* FILTER */}
       <View style={styles.filterRow}>
-        {["current", "expired", "all"].map((type) => (
+        {["all", "current", "expired"].map((type) => (
           <TouchableOpacity
             key={type}
             onPress={() => setFilter(type)}
             style={[
               styles.filterBtn,
-              filter === type && styles.activeBtn,
+              filter === type ? styles.activeBtn : styles.inactiveBtn,
             ]}
           >
             <Text style={styles.filterText}>{t(type)}</Text>
@@ -235,12 +282,11 @@ export default function ProviderBookingScreen({ navigation }) {
         ))}
       </View>
 
-      {/* LIST */}
       <FlatList
-        data={filteredBookings}
-        renderItem={renderItem}
+        data={sortedBookings}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={{ padding: 15, paddingBottom: 120 }}
+        renderItem={renderItem}
+        contentContainerStyle={{ padding: 15 }}
       />
     </View>
   );
@@ -249,101 +295,98 @@ export default function ProviderBookingScreen({ navigation }) {
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 15,
     marginBottom: 15,
-    elevation: 5,
   },
 
-  currentCard: { backgroundColor: "#e8f5e9" },
-  expiredCard: { backgroundColor: "#ffebee" },
-
-  imageRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 10,
+  currentCard: {
+    backgroundColor: "#d7f5e3",
   },
 
-  farmerImg: {
-    width: 65,
-    height: 65,
-    borderRadius: 40,
-    marginRight: -15,
+  expiredCard: {
+    backgroundColor: "#f8d7da",
+  },
+
+  imageWrap: {
+    alignItems: "center",
   },
 
   machineImg: {
-    width: 75,
-    height: 75,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+  },
+
+  userImg: {
+    width: 55,
+    height: 55,
+    borderRadius: 30,
+    position: "absolute",
+    bottom: -10,
+    right: 100,
+    borderWidth: 3,
+    borderColor: "#fff",
   },
 
   title: {
     textAlign: "center",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginTop: 12,
   },
 
-  infoBox: {
-    marginBottom: 10,
-  },
-
-  row: {
+  text: {
     fontSize: 13,
-    marginBottom: 6,
+    marginTop: 4,
   },
 
-  btnRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  slotTitle: {
     marginTop: 10,
-  },
-
-  contactBtn: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "#2E7D32",
-    padding: 10,
-    borderRadius: 10,
-    marginRight: 5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  chatBtn: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "#1565C0",
-    padding: 10,
-    borderRadius: 10,
-    marginLeft: 5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  btnText: {
-    color: "#fff",
-    marginLeft: 5,
     fontWeight: "bold",
+  },
+
+  slotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+
+  slotCard: {
+    width: "48%",
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#b2dfdb",
+  },
+
+  slotText: {
+    fontSize: 12,
+    textAlign: "center",
   },
 
   filterRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    padding: 10,
   },
 
   filterBtn: {
-    padding: 8,
-    backgroundColor: "#ddd",
-    borderRadius: 10,
+    flex: 1,
+    padding: 10,
+    alignItems: "center",
   },
 
   activeBtn: {
     backgroundColor: "#2E7D32",
   },
 
+  inactiveBtn: {
+    backgroundColor: "#1565C0",
+  },
+
   filterText: {
+    color: "#fff",
     fontWeight: "bold",
   },
 });

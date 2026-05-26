@@ -91,7 +91,16 @@
   "hour_charge":"ঘণ্টা (চার্জ)",
   "decimal_charge":"শতক (চার্জ)",
   "bigha_charge":"বিঘা (চার্জ)",
-  "taka": "টাকা"
+  "taka": "টাকা",
+  "morning":"সকাল",
+  "noon":"দুপুর",
+  "afternoon":"বিকাল",
+  "night":"রাত",
+  "dates": "তারিখ",
+  "time_slot": "নির্বাচিত সময়",
+  "new_booking_request": "নতুন বুকিং অনুরোধ",
+  "you_have_new_request": "আপনি একটি নতুন বুকিং অনুরোধ পেয়েছেন",
+  "unknown": "অজানা"
 
   
 
