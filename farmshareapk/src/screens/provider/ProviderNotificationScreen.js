@@ -21,11 +21,13 @@ import {
   updateDoc,
 } from "firebase/firestore";
 
+import { showNotificationPopup } from "../../utils/popup";
 import { db } from "../../firebase/firebaseConfig";
 import { Audio } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
-
+import { showLocalNotification } from "../../services/notificationService";
 /* ================= SOUND ================= */
+
 const playSound = async () => {
   try {
     const { sound } = await Audio.Sound.createAsync(
@@ -37,7 +39,7 @@ const playSound = async () => {
   }
 };
 
-/* ================= MACHINE IMAGE FALLBACK ================= */
+/* ================= MACHINE FALLBACK ================= */
 const getMachineFallback = (type) => {
   const t = (type || "").toLowerCase().trim();
 
@@ -76,7 +78,6 @@ export default function ProviderNotificationScreen({ navigation }) {
     const q = query(
       collection(db, "bookings"),
       where("providerId", "==", provider.uid),
-      where("status", "==", "pending"),
       orderBy("createdAt", "desc")
     );
 
@@ -89,55 +90,77 @@ export default function ProviderNotificationScreen({ navigation }) {
       const enriched = await Promise.all(
         raw.map(async (item) => {
           let userPhoto = null;
+          let userName = item.userName || null;
 
           if (item.userId) {
-            const userRef = doc(db, "users", item.userId);
-            const userSnap = await getDoc(userRef);
+            const userSnap = await getDoc(doc(db, "users", item.userId));
 
             if (userSnap.exists()) {
               userPhoto = userSnap.data()?.photo || null;
+              userName = userSnap.data()?.name || userName;
             }
           }
 
           return {
             ...item,
             userPhoto,
-            seen: item.seen || false,
+            userName,
+            isRead: item.isRead === true, // 🔥 STRICT BOOLEAN
           };
         })
       );
 
+      // 🔔 sound only for new items
       if (enriched.length > prevCount.current) {
-        playSound();
-      }
+
+  const latest = enriched[0];
+
+  // 🔊 SOUND
+  playSound();
+
+  // 📲 POPUP
+  showNotificationPopup({
+    title: "🚜 New Booking Request",
+    body: `${latest.userName} sent a booking request`,
+  });
+}
 
       prevCount.current = enriched.length;
       setNotifications(enriched);
     });
 
     return () => unsub();
-  }, []);
+  }, [provider]);
 
-  /* ================= MARK AS SEEN ================= */
-  const markAsSeen = async (id) => {
+  /* ================= MARK AS READ (SAFE UPDATE) ================= */
+  const markAsRead = async (id) => {
     try {
       await updateDoc(doc(db, "bookings", id), {
-        seen: true,
+        isRead: true,
       });
+
+      // 🔥 local instant UI update (no wait for Firestore)
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, isRead: true } : n
+        )
+      );
     } catch (e) {
       console.log(e);
     }
   };
 
-  /* ================= MACHINE IMAGE ================= */
+  /* ================= IMAGE ================= */
   const getImage = (uri, type) => {
     if (uri && typeof uri === "string") return { uri };
     return getMachineFallback(type);
   };
 
-  /* ================= HANDLE PRESS ================= */
+  /* ================= PRESS ================= */
   const handlePress = (item) => {
-    markAsSeen(item.id);
+    if (!item.isRead) {
+      markAsRead(item.id);
+    }
 
     navigation.navigate("ProviderBookingRequests", {
       bookingId: item.id,
@@ -151,7 +174,7 @@ export default function ProviderNotificationScreen({ navigation }) {
         onPress={() => handlePress(item)}
         style={[
           styles.card,
-          item.seen ? styles.seenCard : styles.newCard,
+          item.isRead ? styles.readCard : styles.unreadCard,
         ]}
       >
         {/* IMAGE STACK */}
@@ -171,9 +194,9 @@ export default function ProviderNotificationScreen({ navigation }) {
           />
         </View>
 
-        {/* TEXT SECTION */}
+        {/* TEXT */}
         <View style={styles.textBox}>
-          {/* 🔥 MACHINE TYPE (NEVER REMOVED) */}
+          {/* DO NOT REMOVE */}
           <Text style={styles.machineType}>
             🚜 {t(item.machineType)}
           </Text>
@@ -224,11 +247,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  newCard: {
+  /* 🟢 GREEN = UNREAD */
+  unreadCard: {
     backgroundColor: "#E8F5E9",
   },
 
-  seenCard: {
+  /* 🔴 RED = READ FOREVER */
+  readCard: {
     backgroundColor: "#FFEBEE",
   },
 

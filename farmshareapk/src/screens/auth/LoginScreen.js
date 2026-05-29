@@ -11,10 +11,16 @@ import {
   Animated,
   Dimensions,
 } from "react-native";
+
 import { useTranslation } from "react-i18next";
 import { loginUser } from "../../firebase/authService";
 
-const { width, height } = Dimensions.get("window");
+import { registerForPushNotificationsAsync } 
+from "../../services/notificationService";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+
+const { width } = Dimensions.get("window");
 
 export default function LoginScreen({ navigation }) {
 
@@ -23,9 +29,9 @@ export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  // Floating animation
   const floatAnim = useRef(new Animated.Value(0)).current;
 
+  /* ================= FLOAT ANIMATION ================= */
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -43,15 +49,29 @@ export default function LoginScreen({ navigation }) {
     ).start();
   }, []);
 
+  /* ================= LOGIN HANDLER ================= */
   const handleLogin = async () => {
+
     if (!phone || !password) {
       return Alert.alert(t("error"), t("fill_fields"));
     }
 
     try {
       const userData = await loginUser({ phone, password });
+
+      const user = userData.user;
       const role = userData.role;
 
+      /* ================= PUSH NOTIFICATION SETUP ================= */
+      const token = await registerForPushNotificationsAsync();
+
+      if (token && user?.uid) {
+        await updateDoc(doc(db, "users", user.uid), {
+          expoPushToken: token,
+        });
+      }
+
+      /* ================= NAVIGATION ================= */
       if (role === "farmer") {
         navigation.reset({
           index: 0,
@@ -63,6 +83,7 @@ export default function LoginScreen({ navigation }) {
           routes: [{ name: "ProviderDashboard" }],
         });
       }
+
     } catch (error) {
       Alert.alert(t("login_failed"), error.message);
     }
@@ -74,16 +95,19 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       resizeMode="cover"
     >
-      {/* Logo at top */}
+
+      {/* LOGO */}
       <Image
         source={require("../../../assets/logo/Logo.png")}
         style={styles.logo}
       />
 
-      {/* Title */}
-      <Text style={styles.title}>{t("login_to_app")}</Text>
+      {/* TITLE */}
+      <Text style={styles.title}>
+        {t("login_to_app")}
+      </Text>
 
-      {/* Phone Input */}
+      {/* PHONE */}
       <TextInput
         style={styles.input}
         placeholder={t("phone")}
@@ -93,7 +117,7 @@ export default function LoginScreen({ navigation }) {
         keyboardType="phone-pad"
       />
 
-      {/* Password Input */}
+      {/* PASSWORD */}
       <TextInput
         style={styles.input}
         placeholder={t("password")}
@@ -103,26 +127,42 @@ export default function LoginScreen({ navigation }) {
         secureTextEntry
       />
 
-      {/* Login Button */}
+      {/* LOGIN BUTTON */}
       <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>{t("login")}</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+        >
+          <Text style={styles.buttonText}>
+            {t("login")}
+          </Text>
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Register Button */}
-      <Animated.View style={{ transform: [{ translateY: floatAnim }], marginTop: 20 }}>
+      {/* REGISTER BUTTON */}
+      <Animated.View
+        style={{
+          transform: [{ translateY: floatAnim }],
+          marginTop: 20,
+        }}
+      >
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("RoleSelection")}
+          onPress={() =>
+            navigation.navigate("RoleSelection")
+          }
         >
-          <Text style={styles.buttonText}>{t("open_new_account")}</Text>
+          <Text style={styles.buttonText}>
+            {t("open_new_account")}
+          </Text>
         </TouchableOpacity>
       </Animated.View>
+
     </ImageBackground>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

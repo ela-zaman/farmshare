@@ -9,7 +9,15 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "plugins": [
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sounds/notification.mp3"]
+        }
+      ]
+    ]
     },
     "ios": {
       "supportsTablet": true

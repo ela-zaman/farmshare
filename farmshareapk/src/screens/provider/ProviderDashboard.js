@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,40 @@ import {
   Image,
   Dimensions,
   ScrollView,
-  ImageBackground
+  ImageBackground,
 } from "react-native";
+
 import { useTranslation } from "react-i18next";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+import { getAuth } from "firebase/auth";
 
 const screenWidth = Dimensions.get("window").width;
 const buttonSize = (screenWidth / 2) - 30;
 
 export default function ProviderDashboard({ navigation }) {
+  const { t, i18n } = useTranslation();
 
-  const { t } = useTranslation();
+  const provider = getAuth().currentUser;
+
+  const [newNotificationCount, setNewNotificationCount] = useState(0);
+
+  /* ================= REALTIME NOTIFICATION COUNT ================= */
+  useEffect(() => {
+    if (!provider) return;
+
+   const q = query(
+  collection(db, "bookings"),
+  where("providerId", "==", provider.uid),
+  where("isRead", "==", false)
+);
+    const unsub = onSnapshot(q, (snap) => {
+      setNewNotificationCount(snap.size); // 🔥 green count
+    });
+
+   
+    return () => unsub();
+  }, [provider]);
 
   return (
     <ImageBackground
@@ -27,10 +51,9 @@ export default function ProviderDashboard({ navigation }) {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { paddingBottom: 150 }
+          { paddingBottom: 150 },
         ]}
       >
-
         {/* CURRENT STATUS CARD */}
         <TouchableOpacity
           style={styles.statusCard}
@@ -63,6 +86,7 @@ export default function ProviderDashboard({ navigation }) {
             <Text style={styles.label}>{t("add_machinery")}</Text>
           </TouchableOpacity>
 
+          {/* NOTIFICATION BUTTON WITH BADGE */}
           <TouchableOpacity
             style={styles.button}
             onPress={() => navigation.navigate("ProviderNotification")}
@@ -72,6 +96,20 @@ export default function ProviderDashboard({ navigation }) {
               style={styles.icon}
               resizeMode="contain"
             />
+
+            {/* 🔔 BADGE */}
+            {newNotificationCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {i18n.language === "bn"
+                    ? newNotificationCount
+                        .toString()
+                        .replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d])
+                    : newNotificationCount}
+                </Text>
+              </View>
+            )}
+
             <Text style={styles.label}>{t("notification")}</Text>
           </TouchableOpacity>
         </View>
@@ -117,20 +155,8 @@ export default function ProviderDashboard({ navigation }) {
             <Text style={styles.label}>{t("booking_requests")}</Text>
           </TouchableOpacity>
 
-          {/* MY MESSAGES */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => navigation.navigate("ProviderMessages")}
-          >
-            <Image
-              source={require("../../../assets/images/Dashboard/Current Status.png")}
-              style={styles.icon}
-              resizeMode="contain"
-            />
-            <Text style={styles.label}>{t("my_messages")}</Text>
-          </TouchableOpacity>
+        
         </View>
-
       </ScrollView>
     </ImageBackground>
   );
@@ -138,17 +164,15 @@ export default function ProviderDashboard({ navigation }) {
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-
   background: {
-    flex: 1
+    flex: 1,
   },
 
-  /* ✅ CENTER EVERYTHING */
   container: {
     padding: 15,
     flexGrow: 1,
-    justifyContent: "center",   // vertical center
-    alignItems: "center"        // horizontal center
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   statusCard: {
@@ -159,31 +183,31 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 25,
     elevation: 4,
-    width: "100%"
+    width: "100%",
   },
 
   statusImage: {
     width: 60,
     height: 60,
-    marginRight: 20
+    marginRight: 20,
   },
 
   statusTitle: {
     fontSize: 20,
-    fontWeight: "700"
+    fontWeight: "700",
   },
 
   statusSubtitle: {
     fontSize: 14,
     color: "#333",
-    marginTop: 4
+    marginTop: 4,
   },
 
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 20,
-    width: "100%"
+    width: "100%",
   },
 
   button: {
@@ -193,18 +217,39 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 3
+    elevation: 3,
+    position: "relative",
   },
 
   icon: {
     width: 60,
     height: 60,
-    marginBottom: 10
+    marginBottom: 10,
   },
 
   label: {
     fontSize: 15,
     fontWeight: "500",
-    textAlign: "center"
-  }
+    textAlign: "center",
+  },
+
+  /* 🔔 BADGE */
+  badge: {
+    position: "absolute",
+    top: 8,
+    right: 10,
+    backgroundColor: "red",
+    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 5,
+  },
+
+  badgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
 });

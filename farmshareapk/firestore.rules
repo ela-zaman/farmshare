@@ -1,0 +1,106 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ================= USERS ================= */
+    match /users/{userId} {
+
+      allow read: if request.auth != null;
+
+      allow create, update, delete:
+      if request.auth != null
+      && request.auth.uid == userId;
+    }
+   match /notifications/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    /* ================= MACHINES ================= */
+    match /machines/{machineId} {
+
+      allow read: if true;
+
+      allow create:
+      if request.auth != null;
+
+      allow update, delete:
+      if request.auth != null
+      && request.auth.uid == resource.data.providerId;
+    }
+
+
+    /* ================= BOOKINGS ================= */
+    match /bookings/{bookingId} {
+
+      allow create:
+      if request.auth != null;
+
+      allow read:
+      if request.auth != null &&
+      (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.providerId
+      );
+
+      allow update:
+      if request.auth != null &&
+      (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.providerId
+      );
+
+      allow delete:
+      if request.auth != null &&
+      request.auth.uid == resource.data.userId;
+    }
+
+
+    /* ================= CONTACTS ================= */
+    match /contacts/{contactId} {
+
+      allow create:
+      if request.auth != null;
+
+      allow read:
+      if request.auth != null &&
+      request.auth.uid == resource.data.providerId;
+
+      allow update, delete:
+      if request.auth != null &&
+      request.auth.uid == resource.data.providerId;
+    }
+
+
+    /* ================= CHATS ================= */
+    match /chats/{chatId} {
+
+      // create chat
+      allow create:
+      if request.auth != null;
+
+      // only participants can access chat
+      allow read, update:
+      if request.auth != null &&
+      request.auth.uid in resource.data.participants;
+
+      /* ===== MESSAGES SUBCOLLECTION ===== */
+      match /messages/{messageId} {
+
+        allow create:
+        if request.auth != null;
+
+        allow read:
+        if request.auth != null &&
+        request.auth.uid in
+        get(
+          /databases/$(database)/documents/chats/$(chatId)
+        ).data.participants;
+
+        allow update, delete:
+        if request.auth != null;
+      }
+    }
+
+  }
+}

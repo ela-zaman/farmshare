@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   StyleSheet,
   Image,
   TouchableOpacity,
@@ -39,7 +39,7 @@ const MONTHS = {
     "July","August","September","October","November","December"
   ],
   bn: [
-    "জানুয়ারী","ফেব্রুয়ারী","মার্চ","এপ্রিল","মে","জুন",
+    "জানুয়ারী","ফেবুয়ারী","মার্চ","এপ্রিল","মে","জুন",
     "জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"
   ],
 };
@@ -54,7 +54,6 @@ export default function ProviderBookingScreen({ navigation }) {
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  /* ================= DATE LOGIC ================= */
   const normalizeDates = (dates) =>
     Array.isArray(dates) ? dates : dates ? [dates] : [];
 
@@ -64,7 +63,6 @@ export default function ProviderBookingScreen({ navigation }) {
   const isCurrent = (dates) =>
     normalizeDates(dates).some((d) => d >= todayStr);
 
-  /* ================= DATE FORMAT ================= */
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
 
@@ -85,7 +83,6 @@ export default function ProviderBookingScreen({ navigation }) {
     return `${day} ${month} ${year}`;
   };
 
-  /* ================= IMAGE ================= */
   const getMachineImage = (machine) => {
     if (machine?.machineImage)
       return { uri: machine.machineImage };
@@ -111,7 +108,6 @@ export default function ProviderBookingScreen({ navigation }) {
   const getUserImage = (uri) =>
     uri ? { uri } : require("../../../assets/images/add.png");
 
-  /* ================= FETCH ================= */
   useEffect(() => {
     if (!provider) return;
 
@@ -160,7 +156,6 @@ export default function ProviderBookingScreen({ navigation }) {
     fetchBookings();
   }, [provider]);
 
-  /* ================= SORT LATEST → OLDEST ================= */
   const sortedBookings = useMemo(() => {
     let data = [...bookings];
 
@@ -176,7 +171,6 @@ export default function ProviderBookingScreen({ navigation }) {
     );
   }, [bookings, filter]);
 
-  /* ================= TIME SLOT ================= */
   const getSlotLabel = (hour) => {
     if (hour >= 5 && hour < 11) return t("morning");
     if (hour >= 11 && hour < 15) return t("noon");
@@ -188,47 +182,32 @@ export default function ProviderBookingScreen({ navigation }) {
     slots.map((s, i) => {
       const [start, end] = s.split("-").map(Number);
 
-      const label =
-        `${getSlotLabel(start)} ` +
-        `${i18n.language === "bn"
-          ? toBnNumber(start)
-          : start
-        }:00 - ` +
-        `${i18n.language === "bn"
-          ? toBnNumber(end)
-          : end
-        }:00`;
-
-      return { id: i, label };
+      return {
+        id: i,
+        label:
+          `${getSlotLabel(start)} ` +
+          `${i18n.language === "bn" ? toBnNumber(start) : start}:00 - ` +
+          `${i18n.language === "bn" ? toBnNumber(end) : end}:00`,
+      };
     });
 
-  /* ================= RENDER ================= */
-  const renderItem = ({ item }) => {
+  const renderItem = (item) => {
     const expired = isExpired(item.dates);
 
     return (
       <View
+        key={item.id}
         style={[
           styles.card,
           expired ? styles.expiredCard : styles.currentCard,
         ]}
       >
-        {/* IMAGES */}
         <View style={styles.imageWrap}>
-          <Image
-            source={getMachineImage(item)}
-            style={styles.machineImg}
-          />
-          <Image
-            source={getUserImage(item.userPhoto)}
-            style={styles.userImg}
-          />
+          <Image source={getMachineImage(item)} style={styles.machineImg} />
+          <Image source={getUserImage(item.userPhoto)} style={styles.userImg} />
         </View>
 
-        {/* TEXT */}
-        <Text style={styles.title}>
-          {t(item.machineType)}
-        </Text>
+        <Text style={styles.title}>{t(item.machineType)}</Text>
 
         <Text style={styles.text}>
           <FontAwesome5 name="user-circle" /> {t("farmer_name")}: {item.userName}
@@ -243,16 +222,12 @@ export default function ProviderBookingScreen({ navigation }) {
         </Text>
 
         <Text style={styles.text}>
-          📅 {t("dates")}:{" "}
-          {normalizeDates(item.dates).map(formatDate).join(", ")}
+          📅 {t("dates")}: {normalizeDates(item.dates).map(formatDate).join(", ")}
         </Text>
 
-        {/* TIME SLOT */}
-        <Text style={styles.slotTitle}>
-          ⏰ {t("time_slot")}
-        </Text>
+        {/* ✅ TIME SLOTS (RESTORED - UNCHANGED) */}
+        <Text style={styles.slotTitle}>⏰ {t("time_slot")}</Text>
 
-        {/* SLOT CARDS */}
         <View style={styles.slotGrid}>
           {formatSlots(item.slots).map((slot) => (
             <View key={slot.id} style={styles.slotCard}>
@@ -266,7 +241,6 @@ export default function ProviderBookingScreen({ navigation }) {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* FILTER */}
       <View style={styles.filterRow}>
         {["all", "current", "expired"].map((type) => (
           <TouchableOpacity
@@ -282,18 +256,19 @@ export default function ProviderBookingScreen({ navigation }) {
         ))}
       </View>
 
-      <FlatList
-        data={sortedBookings}
-        keyExtractor={(i) => i.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ padding: 15 }}
-      />
+      <ScrollView contentContainerStyle={styles.container}>
+        {sortedBookings.map(renderItem)}
+      </ScrollView>
     </View>
   );
 }
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
+  container: {
+    paddingBottom: 150,
+  },
+
   card: {
     borderRadius: 18,
     padding: 15,

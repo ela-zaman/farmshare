@@ -162,6 +162,7 @@ export default function BookingSummary({ route, navigation }) {
         chargePerDecimal,
         chargePerBigha,
         totalCharge,
+        isRead: false,
 
         dates: [selectedDate],
         slots: selectedSlots,
