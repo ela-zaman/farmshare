@@ -49,12 +49,43 @@ const MONTHS = {
   ],
 };
 
+/* ================= MACHINE DEFAULT IMAGES ================= */
+const getMachineDefaultImage = (machineType) => {
+  const type = (machineType || "").toLowerCase().trim();
+  
+  switch(type) {
+    case "tractor":
+      return require("../../../assets/images/Machines/tractor.png");
+    case "powertiller":
+      return require("../../../assets/images/Machines/powertiller.png");
+    case "reaper":
+      return require("../../../assets/images/Machines/reaper.png");
+    case "sprayer":
+      return require("../../../assets/images/Machines/sprayer.jpg");
+    case "thresher":
+      return require("../../../assets/images/Machines/thresher.png");
+    case "combine harvester":
+      return require("../../../assets/images/Machines/combine harvester.png");
+    default:
+      return require("../../../assets/images/add.png");
+  }
+};
+
 export default function ProviderBookingRequests() {
   const { t, i18n } = useTranslation();
   const [requests, setRequests] = useState([]);
 
   const provider = getAuth().currentUser;
   const isBn = i18n.language === "bn";
+
+  /* ================= FILTER FUTURE DATES ================= */
+  const isFutureOrTodayDate = (dateStr) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(dateStr);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate >= today;
+  };
 
   /* ================= FETCH ================= */
   useEffect(() => {
@@ -93,15 +124,22 @@ export default function ProviderBookingRequests() {
             userPhone: userData.phone || "",
             userPhoto: userData.photo || null,
             machineImage: machineData.machineImage || null,
+            machineTypeFromDB: machineData.machineType || item.machineType,
           };
         })
       );
 
-      setRequests(enriched);
+      // Filter: Only show requests with at least one date from today to future
+      const filteredRequests = enriched.filter(request => {
+        if (!request.dates || request.dates.length === 0) return false;
+        return request.dates.some(date => isFutureOrTodayDate(date));
+      });
+
+      setRequests(filteredRequests);
     });
 
     return () => unsub();
-  }, []);
+  }, [provider]);
 
   /* ================= DATE FORMAT (FULL MULTILINGUAL) ================= */
   const formatDate = (date) => {
@@ -121,7 +159,7 @@ export default function ProviderBookingRequests() {
   const formatTime = (val) =>
     isBn ? toBanglaNumber(val) : val;
 
-/* morning/noon label */
+  /* morning/noon label */
   const getSlotName = (slot) => {
     const start = parseInt(slot.split("-")[0]);
 
@@ -133,95 +171,122 @@ export default function ProviderBookingRequests() {
 
   /* ================= ACTION ================= */
   const handleDecision = async (id, status) => {
-    await updateDoc(doc(db, "bookings", id), { status });
-    Alert.alert(t("success"));
+    try {
+      await updateDoc(doc(db, "bookings", id), { status });
+      Alert.alert(t("success"), t("booking_request_updated"));
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      Alert.alert(t("error"), t("something_went_wrong"));
+    }
+  };
+
+  /* ================= GET MACHINE IMAGE ================= */
+  const getMachineImage = (item) => {
+    // If machine has custom image in Firebase
+    if (item.machineImage && item.machineImage.trim() !== "") {
+      return { uri: item.machineImage };
+    }
+    // Otherwise use default image based on machine type
+    return getMachineDefaultImage(item.machineTypeFromDB || item.machineType);
   };
 
   /* ================= CARD ================= */
-  const renderCard = (item) => (
-    <LinearGradient
-      key={item.id}
-      colors={["#FDE2FF", "#D6EEFF"]}
-      style={styles.card}
-    >
-      <View style={styles.imageWrap}>
-        <Image
-          source={
-            item.machineImage
-              ? { uri: item.machineImage }
-              : require("../../../assets/images/add.png")
-          }
-          style={styles.machineImage}
-        />
+  const renderCard = (item) => {
+    // Filter dates to only show future/today dates
+    const futureDates = item.dates?.filter(date => isFutureOrTodayDate(date)) || [];
+    
+    if (futureDates.length === 0) return null;
 
-        <Image
-          source={
-            item.userPhoto
-              ? { uri: item.userPhoto }
-              : require("../../../assets/images/add.png")
-          }
-          style={styles.userImage}
-        />
-      </View>
+    return (
+      <LinearGradient
+        key={item.id}
+        colors={["#FDE2FF", "#D6EEFF"]}
+        style={styles.card}
+      >
+        <View style={styles.imageWrap}>
+          <Image
+            source={getMachineImage(item)}
+            style={styles.machineImage}
+            resizeMode="contain"
+          />
 
-      <Text style={styles.title}>{t(item.machineType)}</Text>
+          <Image
+            source={
+              item.userPhoto
+                ? { uri: item.userPhoto }
+                : require("../../../assets/images/add.png")
+            }
+            style={styles.userImage}
+          />
+        </View>
 
-      {/* USER INFO */}
-      <Text style={styles.text}>👤 {t("farmer_name")}: {item.userName}</Text>
-      <Text style={styles.text}>📞 {t("phone")}: {item.userPhone}</Text>
+        <Text style={styles.title}>{t(item.machineType)}</Text>
 
-      {/* DATE (MULTILINGUAL FIXED) */}
-      <Text style={styles.text}>
-        📅 {t("dates")}:{" "}
-        {item.dates?.map((d) => formatDate(d)).join(", ")}
-      </Text>
+        {/* USER INFO */}
+        <Text style={styles.text}>👤 {t("farmer_name")}: {item.userName}</Text>
+        <Text style={styles.text}>📞 {t("phone")}: {item.userPhone}</Text>
 
-      {/* TIME SLOT */}
-      <Text style={styles.slotTitle}>⏰ {t("time_slot")}</Text>
+        {/* DATE (Only future/today dates) */}
+        <Text style={styles.text}>
+          📅 {t("dates")}:{" "}
+          {futureDates.map((d) => formatDate(d)).join(", ")}
+        </Text>
 
-      <View style={styles.slotWrap}>
-        {item.slots?.map((slot, index) => {
-          const [start, end] = slot.split("-");
+        {/* TIME SLOT */}
+        <Text style={styles.slotTitle}>⏰ {t("time_slot")}</Text>
 
-          return (
-            <LinearGradient
-              key={index}
-              colors={["#A8D8FF", "#FFC6E6"]}
-              style={styles.slotBorder}
-            >
-              <View style={styles.slotCard}>
-                <Text style={styles.slotText}>
-                  {getSlotName(slot)}{" "}
-                  {formatTime(start)}:00 - {formatTime(end)}:00
-                </Text>
-              </View>
-            </LinearGradient>
-          );
-        })}
-      </View>
+        <View style={styles.slotWrap}>
+          {item.slots?.map((slot, index) => {
+            const [start, end] = slot.split("-");
 
-      {/* BUTTONS */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.accept}
-          onPress={() => handleDecision(item.id, "accepted")}
-        >
-          <Text style={styles.btnText}>✅ {t("accept")}</Text>
-        </TouchableOpacity>
+            return (
+              <LinearGradient
+                key={index}
+                colors={["#A8D8FF", "#FFC6E6"]}
+                style={styles.slotBorder}
+              >
+                <View style={styles.slotCard}>
+                  <Text style={styles.slotText}>
+                    {getSlotName(slot)}{" "}
+                    {formatTime(start)}:00 - {formatTime(end)}:00
+                  </Text>
+                </View>
+              </LinearGradient>
+            );
+          })}
+        </View>
 
-        <TouchableOpacity
-          style={styles.deny}
-          onPress={() => handleDecision(item.id, "denied")}
-        >
-          <Text style={styles.btnText}>❌ {t("deny")}</Text>
-        </TouchableOpacity>
-      </View>
-    </LinearGradient>
-  );
+        {/* BUTTONS */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.accept}
+            onPress={() => handleDecision(item.id, "accepted")}
+          >
+            <Text style={styles.btnText}>✅ {t("accept")}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deny}
+            onPress={() => handleDecision(item.id, "denied")}
+          >
+            <Text style={styles.btnText}>❌ {t("deny")}</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {requests.map(renderCard)}
+      {requests.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="calendar-outline" size={80} color="#ccc" />
+          <Text style={styles.emptyText}>{t("no_booking_requests")}</Text>
+          <Text style={styles.emptySubText}>{t("no_future_requests")}</Text>
+        </View>
+      ) : (
+        requests.map(renderCard)
+      )}
     </ScrollView>
   );
 }
@@ -233,6 +298,27 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 50,
+  },
+
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#999",
+    marginTop: 20,
+  },
+
+  emptySubText: {
+    fontSize: 14,
+    color: "#bbb",
+    marginTop: 10,
+    textAlign: "center",
+  },
+
   card: {
     padding: 15,
     borderRadius: 25,
@@ -242,12 +328,14 @@ const styles = StyleSheet.create({
   imageWrap: {
     alignItems: "center",
     marginBottom: 20,
+    position: "relative",
   },
 
   machineImage: {
     width: 170,
     height: 120,
     borderRadius: 15,
+    backgroundColor: "#fff",
   },
 
   userImage: {
@@ -259,6 +347,7 @@ const styles = StyleSheet.create({
     right: 80,
     borderWidth: 3,
     borderColor: "#fff",
+    backgroundColor: "#fff",
   },
 
   title: {

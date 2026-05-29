@@ -7,8 +7,8 @@ import {
   Image,
   Dimensions,
   ScrollView,
-  ImageBackground,
 } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTranslation } from "react-i18next";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
@@ -29,24 +29,24 @@ export default function ProviderDashboard({ navigation }) {
   useEffect(() => {
     if (!provider) return;
 
-   const q = query(
-  collection(db, "bookings"),
-  where("providerId", "==", provider.uid),
-  where("isRead", "==", false)
-);
+    const q = query(
+      collection(db, "bookings"),
+      where("providerId", "==", provider.uid),
+      where("isRead", "==", false)
+    );
     const unsub = onSnapshot(q, (snap) => {
-      setNewNotificationCount(snap.size); // 🔥 green count
+      setNewNotificationCount(snap.size);
     });
 
-   
     return () => unsub();
   }, [provider]);
 
   return (
-    <ImageBackground
-      source={require("../../../assets/images/background6.png")}
-      style={styles.background}
-      resizeMode="cover"
+    <LinearGradient
+      colors={['#FFB6C1', '#ADD8E6', '#FFC0CB']} // Light Pink to Light Blue to Soft Pink
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradient}
     >
       <ScrollView
         contentContainerStyle={[
@@ -154,17 +154,15 @@ export default function ProviderDashboard({ navigation }) {
             />
             <Text style={styles.label}>{t("booking_requests")}</Text>
           </TouchableOpacity>
-
-        
         </View>
       </ScrollView>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  background: {
+  gradient: {
     flex: 1,
   },
 
@@ -178,12 +176,19 @@ const styles = StyleSheet.create({
   statusCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ADD8E6",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 12,
     padding: 20,
     marginBottom: 25,
     elevation: 4,
     width: "100%",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
   },
 
   statusImage: {
@@ -195,11 +200,12 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 20,
     fontWeight: "700",
+    color: "#333",
   },
 
   statusSubtitle: {
     fontSize: 14,
-    color: "#333",
+    color: "#555",
     marginTop: 4,
   },
 
@@ -213,12 +219,19 @@ const styles = StyleSheet.create({
   button: {
     width: buttonSize,
     height: buttonSize,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     elevation: 3,
     position: "relative",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
   },
 
   icon: {
@@ -231,6 +244,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     textAlign: "center",
+    color: "#333",
   },
 
   /* 🔔 BADGE */

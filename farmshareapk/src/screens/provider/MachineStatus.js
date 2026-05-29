@@ -13,7 +13,7 @@ import {
   Image
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useTranslation } from "react-i18next";
 
@@ -86,61 +86,9 @@ export default function MachineStatus({ route }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [machine, setMachine] = useState(null);
 
-  const slots = generateSlots();
-
-  // ---------------- Helpers ----------------
-  const toBanglaNumber = (num) => {
-    if (num === undefined || num === null) return "";
-    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
-    return num.toString().split("").map(d => bn[d] || d).join("");
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-
-    const day = isBn ? toBanglaNumber(date.getDate()) : date.getDate();
-    const month = isBn
-      ? LocaleConfig.locales.bn.monthNames[date.getMonth()]
-      : LocaleConfig.locales.en.monthNames[date.getMonth()];
-    const year = isBn ? toBanglaNumber(date.getFullYear()) : date.getFullYear();
-
-    return `${day} ${month} ${year}`;
-  };
-
-  const getMachineImage = () => {
-    const key = machineType?.toLowerCase().replace(/\s/g, "_");
-    return machineImages[key] || require("../../../assets/images/add.png");
-  };
-
-  // ✅ New helper for multilingual machine type
-  const getMachineTypeLabel = (type) => {
-  if (!type) return "";
-  const key = type.toLowerCase().replace(/\s/g, "_"); // e.g., "Tractor" -> "tractor"
-  return t(key); // Looks for "tractor" key in your i18n JSON
-};
-  const getSlotLabel = (slot) => {
-    const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা" };
-    const labelText = isBn ? labelsBn[slot.label] : slot.label;
-
-    const formatHour = (h) => {
-      let hour = h % 12; if(hour===0) hour=12;
-      return isBn ? toBanglaNumber(hour) : hour;
-    };
-
-    return `${labelText} ${formatHour(slot.start)}.00 - ${formatHour(slot.end)}.00 ${isBn ? "টা" : ""}`;
-  };
-
-  const handleSlotPress = (slot) => {
-    const found = bookedData[selectedDate]?.find(b => b.slotId === slot.id);
-    if (found) {
-      setSelectedBooking(found.booking);
-      setModalVisible(true);
-    }
-  };
-
-  // ---------------- Fetch Bookings ----------------
+  // Fetch bookings - moved before conditional return
   useEffect(() => {
     if (!machineId) return;
 
@@ -182,11 +130,90 @@ export default function MachineStatus({ route }) {
     fetchBookings();
   }, [machineId]);
 
-  if (loading) return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color="#007bff"/>
-    </View>
-  );
+  // Fetch machine details - moved before conditional return
+  useEffect(() => {
+    const fetchMachine = async () => {
+      if (!machineId) return;
+
+      try {
+        const ref = doc(db, "machines", machineId);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          setMachine(snap.data());
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchMachine();
+  }, [machineId]);
+
+  const slots = generateSlots();
+
+  // ---------------- Helpers ----------------
+  const toBanglaNumber = (num) => {
+    if (num === undefined || num === null) return "";
+    const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+    return num.toString().split("").map(d => bn[d] || d).join("");
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+
+    const day = isBn ? toBanglaNumber(date.getDate()) : date.getDate();
+    const month = isBn
+      ? LocaleConfig.locales.bn.monthNames[date.getMonth()]
+      : LocaleConfig.locales.en.monthNames[date.getMonth()];
+    const year = isBn ? toBanglaNumber(date.getFullYear()) : date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+  };
+
+  // ✅ Enhanced multilingual number formatter for any number (not just dates)
+  const formatMultilingualNumber = (num) => {
+    if (num === undefined || num === null) return "";
+    if (isBn) {
+      return toBanglaNumber(num);
+    }
+    return num.toString();
+  };
+
+  const getMachineImage = () => {
+    if (machine?.machineImage && machine.machineImage.trim() !== "") {
+      return { uri: machine.machineImage };
+    }
+    return require("../../../assets/images/add.png");
+  };
+
+  const getMachineTypeLabel = (type) => {
+    if (!type) return "";
+    const key = type.toLowerCase().replace(/\s/g, "_");
+    return t(key);
+  };
+
+  const getSlotLabel = (slot) => {
+    const labelsBn = { morning:"সকাল", noon:"দুপুর", afternoon:"বিকাল", evening:"সন্ধ্যা" };
+    const labelText = isBn ? labelsBn[slot.label] : t(slot.label);
+    
+    const formatHour = (h) => {
+      let hour = h % 12;
+      if (hour === 0) hour = 12;
+      return formatMultilingualNumber(hour);
+    };
+
+    return `${labelText} ${formatHour(slot.start)}:00 - ${formatHour(slot.end)}:00 ${isBn ? "টা" : ""}`;
+  };
+
+  const handleSlotPress = (slot) => {
+    const found = bookedData[selectedDate]?.find(b => b.slotId === slot.id);
+    if (found) {
+      setSelectedBooking(found.booking);
+      setModalVisible(true);
+    }
+  };
 
   // ---------------- Mark Dates ----------------
   const markedDates = {};
@@ -197,12 +224,10 @@ export default function MachineStatus({ route }) {
     const bookedCount = bookedData[date].length;
 
     if (bookedCount === totalSlots) {
-      // fully booked -> red
       markedDates[date] = {
         customStyles: { container:{backgroundColor:"#ff4d4d",borderRadius:20}, text:{color:"white",fontWeight:"bold"} }
       };
     } else if (bookedCount > 0) {
-      // partially booked -> yellow
       markedDates[date] = {
         customStyles: { container:{backgroundColor:"#ffd700",borderRadius:20}, text:{color:"black",fontWeight:"bold"} }
       };
@@ -215,6 +240,15 @@ export default function MachineStatus({ route }) {
     };
   }
 
+  // Conditional return after all hooks
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007bff"/>
+      </View>
+    );
+  }
+
   return (
     <>
       <FlatList
@@ -223,8 +257,8 @@ export default function MachineStatus({ route }) {
             <View style={styles.machineHeader}>
               <Image source={getMachineImage()} style={styles.image} />
               <Text style={styles.machineType}>
-  {t("machine_type")}: {getMachineTypeLabel(machineType)}
-</Text>
+                {t("machine_type")}: {getMachineTypeLabel(machineType)}
+              </Text>
               <Text style={styles.calendarTitle}>{t("machine_calendar")}</Text>
             </View>
 
@@ -245,7 +279,7 @@ export default function MachineStatus({ route }) {
                     onPress={()=>!isPast && setSelectedDate(date.dateString)}
                   >
                     <Text style={{color:isPast?"#ccc":style.text?.color||"#000", fontWeight: style.text?.fontWeight||"normal"}}>
-                      {isBn?toBanglaNumber(date.day):date.day}
+                      {formatMultilingualNumber(date.day)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -271,7 +305,7 @@ export default function MachineStatus({ route }) {
             </TouchableOpacity>
           );
         }}
-        contentContainerStyle={{padding:15,paddingBottom:60}}
+        contentContainerStyle={{padding:15,paddingBottom:150}}
       />
 
       <Modal visible={modalVisible} transparent animationType="slide">
@@ -283,10 +317,10 @@ export default function MachineStatus({ route }) {
                 <Text>{t("farmer_name")}: {selectedBooking.userName}</Text>
                 <Text>{t("phone")}: {selectedBooking.userPhone}</Text>
                 <Text>{t("land_address")}: {selectedBooking.landAddress}</Text>
-                <Text>{t("land_size")}: {toBanglaNumber(selectedBooking.landSize)}</Text>
-                <Text>{t("tillage_number")}: {toBanglaNumber(selectedBooking.tillageAmount)}</Text>
+                <Text>{t("land_size")}: {formatMultilingualNumber(selectedBooking.landSize)} {t("bigha")}</Text>
+                <Text>{t("tillage_number")}: {formatMultilingualNumber(selectedBooking.tillageAmount)}</Text>
                 <Text>{t("charge_type")}: {t(selectedBooking.chargeType)}</Text>
-                <Text>{t("total_charge")}: {toBanglaNumber(selectedBooking.totalCharge)}</Text>
+                <Text>{t("total_charge")}: {formatMultilingualNumber(selectedBooking.totalCharge)} {t("taka")}</Text>
                 <Button title={t("close")} onPress={()=>setModalVisible(false)} />
               </>
             )}

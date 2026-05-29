@@ -6,6 +6,7 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 
 import { useTranslation } from "react-i18next";
@@ -17,47 +18,69 @@ import {
   onSnapshot,
   orderBy,
   doc,
-  getDoc,
+  getDocs,
   updateDoc,
 } from "firebase/firestore";
 
-import { showNotificationPopup } from "../../utils/popup";
 import { db } from "../../firebase/firebaseConfig";
 import { Audio } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
-import { showLocalNotification } from "../../services/notificationService";
-/* ================= SOUND ================= */
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
 
+/* ================= NOTIFICATIONS ================= */
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+/* ================= SOUND ================= */
 const playSound = async () => {
   try {
     const { sound } = await Audio.Sound.createAsync(
       require("../../../assets/sounds/notification.mp3")
     );
     await sound.playAsync();
+    setTimeout(() => sound.unloadAsync(), 1000);
   } catch (e) {
     console.log(e);
   }
 };
 
-/* ================= MACHINE FALLBACK ================= */
+/* ================= PUSH TOKEN ================= */
+async function registerForPushNotificationsAsync() {
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+    });
+  }
+
+  if (!Device.isDevice) return;
+
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== "granted") return;
+
+  return await Notifications.getExpoPushTokenAsync();
+}
+
+/* ================= FALLBACK IMAGE ================= */
 const getMachineFallback = (type) => {
   const t = (type || "").toLowerCase().trim();
 
   if (t === "tractor")
     return require("../../../assets/images/Machines/tractor.png");
-
   if (t === "powertiller")
     return require("../../../assets/images/Machines/powertiller.png");
-
   if (t === "reaper")
     return require("../../../assets/images/Machines/reaper.png");
-
   if (t === "sprayer")
     return require("../../../assets/images/Machines/sprayer.jpg");
-
   if (t === "thresher")
     return require("../../../assets/images/Machines/thresher.png");
-
   if (t === "combine harvester")
     return require("../../../assets/images/Machines/combine harvester.png");
 
@@ -69,9 +92,28 @@ export default function ProviderNotificationScreen({ navigation }) {
   const provider = getAuth().currentUser;
 
   const [notifications, setNotifications] = useState([]);
-  const prevCount = useRef(0);
+  const [machineMap, setMachineMap] = useState({});
 
-  /* ================= REALTIME FIRESTORE ================= */
+  const notificationListener = useRef();
+  const responseListener = useRef();
+
+  /* ================= LOAD MACHINES ================= */
+  useEffect(() => {
+    const loadMachines = async () => {
+      const snap = await getDocs(collection(db, "machines"));
+      const map = {};
+
+      snap.forEach((doc) => {
+        map[doc.id] = doc.data();
+      });
+
+      setMachineMap(map);
+    };
+
+    loadMachines();
+  }, []);
+
+  /* ================= BOOKINGS ================= */
   useEffect(() => {
     if (!provider) return;
 
@@ -81,85 +123,36 @@ export default function ProviderNotificationScreen({ navigation }) {
       orderBy("createdAt", "desc")
     );
 
-    const unsub = onSnapshot(q, async (snap) => {
-      const raw = snap.docs.map((d) => ({
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
       }));
 
-      const enriched = await Promise.all(
-        raw.map(async (item) => {
-          let userPhoto = null;
-          let userName = item.userName || null;
-
-          if (item.userId) {
-            const userSnap = await getDoc(doc(db, "users", item.userId));
-
-            if (userSnap.exists()) {
-              userPhoto = userSnap.data()?.photo || null;
-              userName = userSnap.data()?.name || userName;
-            }
-          }
-
-          return {
-            ...item,
-            userPhoto,
-            userName,
-            isRead: item.isRead === true, // 🔥 STRICT BOOLEAN
-          };
-        })
-      );
-
-      // 🔔 sound only for new items
-      if (enriched.length > prevCount.current) {
-
-  const latest = enriched[0];
-
-  // 🔊 SOUND
-  playSound();
-
-  // 📲 POPUP
-  showNotificationPopup({
-    title: "🚜 New Booking Request",
-    body: `${latest.userName} sent a booking request`,
-  });
-}
-
-      prevCount.current = enriched.length;
-      setNotifications(enriched);
+      setNotifications(data);
     });
 
     return () => unsub();
   }, [provider]);
 
-  /* ================= MARK AS READ (SAFE UPDATE) ================= */
-  const markAsRead = async (id) => {
-    try {
-      await updateDoc(doc(db, "bookings", id), {
+  /* ================= IMAGE ================= */
+  const getImage = (item) => {
+    const firebaseImage =
+      machineMap?.[item.machineId]?.machineImage;
+
+    if (firebaseImage && firebaseImage.trim() !== "") {
+      return { uri: firebaseImage };
+    }
+
+    return getMachineFallback(item.machineType);
+  };
+
+  /* ================= NAVIGATION ================= */
+  const handlePress = async (item) => {
+    if (!item.isRead) {
+      await updateDoc(doc(db, "bookings", item.id), {
         isRead: true,
       });
-
-      // 🔥 local instant UI update (no wait for Firestore)
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, isRead: true } : n
-        )
-      );
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  /* ================= IMAGE ================= */
-  const getImage = (uri, type) => {
-    if (uri && typeof uri === "string") return { uri };
-    return getMachineFallback(type);
-  };
-
-  /* ================= PRESS ================= */
-  const handlePress = (item) => {
-    if (!item.isRead) {
-      markAsRead(item.id);
     }
 
     navigation.navigate("ProviderBookingRequests", {
@@ -167,50 +160,58 @@ export default function ProviderNotificationScreen({ navigation }) {
     });
   };
 
+  /* ================= NOTIFICATION LISTENERS ================= */
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener(() => {
+        playSound();
+      });
+
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const bookingId =
+          response.notification.request.content.data?.bookingId;
+
+        if (bookingId) {
+          navigation.navigate("ProviderBookingRequests", {
+            bookingId,
+          });
+        }
+      });
+
+    return () => {
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
+    };
+  }, []);
+
   /* ================= RENDER ================= */
   const renderItem = ({ item }) => {
+    const isRead = item.isRead === true;
+
     return (
       <TouchableOpacity
         onPress={() => handlePress(item)}
         style={[
           styles.card,
-          item.isRead ? styles.readCard : styles.unreadCard,
+          isRead ? styles.readCard : styles.unreadCard,
         ]}
       >
-        {/* IMAGE STACK */}
-        <View style={styles.imageStack}>
-          <Image
-            source={getImage(item.machineImage, item.machineType)}
-            style={styles.machineImg}
-          />
+        <Image source={getImage(item)} style={styles.machineImg} />
 
-          <Image
-            source={
-              item.userPhoto
-                ? { uri: item.userPhoto }
-                : require("../../../assets/images/add.png")
-            }
-            style={styles.userImg}
-          />
-        </View>
-
-        {/* TEXT */}
         <View style={styles.textBox}>
-          {/* DO NOT REMOVE */}
-          <Text style={styles.machineType}>
+          <Text style={styles.title}>
             🚜 {t(item.machineType)}
           </Text>
 
-          <Text style={styles.title}>
-            🔔 {t("new_booking_request")}
-          </Text>
-
           <Text style={styles.subtitle}>
-            {t("you_have_new_request")}
+            {t("new_booking_request")}
           </Text>
 
           <Text style={styles.meta}>
-            👤 {item.userName || t("unknown")}
+            👤 {item.userName || "Unknown"}
           </Text>
         </View>
 
@@ -221,12 +222,18 @@ export default function ProviderNotificationScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={notifications}
-        keyExtractor={(i) => i.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ padding: 15 }}
-      />
+      {notifications.length === 0 ? (
+        <View style={styles.empty}>
+          <Text>No notifications</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(i) => i.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ padding: 15, paddingBottom: 150 }} 
+        />
+      )}
     </View>
   );
 }
@@ -240,75 +247,50 @@ const styles = StyleSheet.create({
 
   card: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
     padding: 12,
-    borderRadius: 14,
-    elevation: 3,
+    marginBottom: 10,
+    borderRadius: 12,
+    alignItems: "center",
   },
 
-  /* 🟢 GREEN = UNREAD */
+  /* 🟢 UNREAD */
   unreadCard: {
     backgroundColor: "#E8F5E9",
   },
 
-  /* 🔴 RED = READ FOREVER */
+  /* 🔴 READ */
   readCard: {
     backgroundColor: "#FFEBEE",
-  },
-
-  imageStack: {
-    width: 70,
-    height: 70,
-    marginRight: 12,
   },
 
   machineImg: {
     width: 60,
     height: 60,
     borderRadius: 10,
-    position: "absolute",
-    left: 0,
-    top: 5,
-  },
-
-  userImg: {
-    width: 38,
-    height: 38,
-    borderRadius: 20,
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    borderWidth: 2,
-    borderColor: "#fff",
+    marginRight: 10,
   },
 
   textBox: {
     flex: 1,
   },
 
-  machineType: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1B5E20",
-    marginBottom: 2,
-  },
-
   title: {
-    fontSize: 14,
     fontWeight: "bold",
-    color: "#0D47A1",
+    fontSize: 14,
   },
 
   subtitle: {
     fontSize: 12,
-    color: "#444",
-    marginTop: 2,
   },
 
   meta: {
     fontSize: 12,
     color: "#666",
-    marginTop: 3,
+  },
+
+  empty: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
