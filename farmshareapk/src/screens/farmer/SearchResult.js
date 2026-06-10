@@ -171,6 +171,9 @@ export default function SearchResult({ route }) {
         <Text style={styles.text}>
           {t("charge_per_bigha")}: {formatTaka(item.chargePerBigha)}
         </Text>
+        <Text style={styles.text}>
+          {t("charge_per_hour")}: {formatTaka(item.chargePerHour)}
+        </Text>
       </View>
     </TouchableOpacity>
   );

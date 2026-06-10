@@ -101,9 +101,13 @@ const TillageTimeCalculator = ({
   if (selectedChargeType === "per_bigha") {
     // 1 hour per bigha
     totalMinutes = tillage * land * 60;
+  }
+  else if (selectedChargeType === "per_decimal"){
+ totalMinutes = tillage * land * 2;
+  
   } else {
     // 2 minutes per decimal
-    totalMinutes = tillage * land * 2;
+    totalMinutes =60;
   }
 
   // Convert to hours
@@ -380,7 +384,8 @@ const fetchProviderImage = async () => {
             <Text>{t("village")}: {machine?.village}</Text>
             <Text>{t("phone")}: {machine?.phone}</Text>
             <Text>{t("charge_per_bigha")}: {isBn ? toBanglaNumber(machine?.chargePerBigha) : machine?.chargePerBigha}</Text>
-            <Text>{t("charge_per_decimal")}: {isBn ? toBanglaNumber(machine?.chargePerDecimal) : machine?.chargePerDecimal}</Text>
+            <Text>{t("charge_per_hour")}: {isBn ? toBanglaNumber(machine?.chargePerHour) : machine?.chargePerHour}</Text>
+      
           </View>
           
   <Image
@@ -401,6 +406,9 @@ const fetchProviderImage = async () => {
         <Picker selectedValue={selectedChargeType} onValueChange={setSelectedChargeType}>
           <Picker.Item label={t("per_decimal")} value="per_decimal"/>
           <Picker.Item label={t("per_bigha")} value="per_bigha"/>
+          <Picker.Item label={t("per_hour")} value="per_hour"/>
+          
+
         </Picker>
       </View>
       <Text style={styles.label}>{t("land_size")}</Text>
