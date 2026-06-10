@@ -12,12 +12,23 @@
       "backgroundColor": "#ffffff",
       "plugins": [
       [
+        
         "expo-notifications",
         {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
           "sounds": ["./assets/sounds/notification.mp3"]
         }
       ]
-    ]
+    ],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#ffffff",
+      "iosDisplayInForeground": true,
+      "androidMode": "default",
+      "androidCollapsedKey": "booking-request"
+    }
+      
     },
     "ios": {
       "supportsTablet": true

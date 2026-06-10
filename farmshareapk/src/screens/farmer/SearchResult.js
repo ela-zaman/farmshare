@@ -22,18 +22,13 @@ export default function SearchResult({ route }) {
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [userDistrict, setUserDistrict] = useState(null);
-  const [userUpazilla, setUserUpazilla] = useState(null);
-
   const isBn = i18n.language === "bn";
 
-  // ---------------- SAFE NORMALIZE ----------------
   const normalize = (text) => {
     if (!text) return "";
     return text.toString().trim().toLowerCase();
   };
 
-  // ---------------- LOAD USER + MACHINES ----------------
   useEffect(() => {
     loadData();
   }, []);
@@ -43,15 +38,10 @@ export default function SearchResult({ route }) {
       const user = auth.currentUser;
       if (!user) return;
 
-      // 🔥 Get user location
       const userSnap = await getDoc(doc(db, "users", user.uid));
 
       if (userSnap.exists()) {
         const data = userSnap.data();
-        setUserDistrict(data.district);
-        setUserUpazilla(data.upazila);
-
-        // Fetch machines AFTER getting user data
         fetchMachines(data.district, data.upazila);
       }
     } catch (err) {
@@ -59,75 +49,60 @@ export default function SearchResult({ route }) {
     }
   };
 
-  // ---------------- FETCH MACHINES ----------------
   const fetchMachines = async (district, upazila) => {
-  try {
-    let data = [];
-    console.log("USER DISTRICT:", district);
-console.log("USER UPAZILA:", upazila);
+    try {
+      let data = [];
 
-    // ✅ 1. FULL MATCH (machine + district + upazila)
-    let q1 = query(
-      collection(db, "machines"),
-      where("machineType", "==", machineType),
-      where("district", "==", district),
-      where("upazila", "==", upazila)
-    );
-
-    let snap = await getDocs(q1);
-    data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    // ✅ 2. FALLBACK: district only
-    if (data.length === 0) {
-      let q2 = query(
+      let q1 = query(
         collection(db, "machines"),
         where("machineType", "==", machineType),
-        where("district", "==", district)
+        where("district", "==", district),
+        where("upazila", "==", upazila)
       );
 
-      snap = await getDocs(q2);
+      let snap = await getDocs(q1);
       data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (data.length === 0) {
+        let q2 = query(
+          collection(db, "machines"),
+          where("machineType", "==", machineType),
+          where("district", "==", district)
+        );
+
+        snap = await getDocs(q2);
+        data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+
+      if (data.length === 0) {
+        let q3 = query(
+          collection(db, "machines"),
+          where("machineType", "==", machineType)
+        );
+
+        snap = await getDocs(q3);
+        data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+
+      setMachines(data);
+    } catch (error) {
+      console.log("ERROR FETCHING MACHINES:", error);
+      setMachines([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // ✅ 3. FINAL FALLBACK: machineType only
-    if (data.length === 0) {
-      let q3 = query(
-        collection(db, "machines"),
-        where("machineType", "==", machineType)
-      );
+  // ✅ NEW: Smart image selector
+  const getMachineImage = (item) => {
+    // 🔥 Firebase uploaded image (most important)
+    if (item?.imageUrl) return { uri: item.imageUrl };
+    if (item?.image) return { uri: item.image };
+    if (item?.photo) return { uri: item.photo };
+    if (item?.machineImage) return { uri: item.machineImage };
 
-      snap = await getDocs(q3);
-      data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
-
-    setMachines(data);
-
-  } catch (error) {
-    console.log("ERROR FETCHING MACHINES:", error);
-    setMachines([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // ---------------- HELPERS ----------------
-
-  const getMachineImage = (type) => {
-    if (!type) return require("../../../assets/images/add.png");
-
-    const key = type.toLowerCase().trim().replace(/\s/g, "_");
-
-    const IMAGE_MAP = {
-      tractor: require("../../../assets/images/Machines/tractor.png"),
-      powertiller: require("../../../assets/images/Machines/powertiller.png"),
-      reaper: require("../../../assets/images/Machines/reaper.png"),
-      bed_planter: require("../../../assets/images/Machines/bed planter.png"),
-      combine_harvester: require("../../../assets/images/Machines/combine harvester.png"),
-      thresher: require("../../../assets/images/Machines/thresher.png"),
-      sprayer: require("../../../assets/images/Machines/sprayer.jpg")
-    };
-
-    return IMAGE_MAP[key] || require("../../../assets/images/add.png");
+    // fallback local image
+    return require("../../../assets/images/add.png");
   };
 
   const getDistrictLabel = (districtKey) => {
@@ -149,11 +124,6 @@ console.log("USER UPAZILA:", upazila);
     return isBn ? (upazilaObj?.bn || upazilaEn) : (upazilaObj?.en || upazilaEn);
   };
 
-  const getMachineTypeLabel = (value) => {
-    if (!value) return "";
-    return t(value) || value;
-  };
-
   const formatTaka = (amount) => {
     if (!amount) return isBn ? "০ টাকা" : "0 Taka";
     return isBn ? `${amount} টাকা` : `${amount} Taka`;
@@ -166,14 +136,12 @@ console.log("USER UPAZILA:", upazila);
       activeOpacity={0.7}
       onPress={() => navigation.navigate("BookingDetails", { machine: item })}
     >
-      <Image
-        source={getMachineImage(item.machineType)}
-        style={styles.image}
-      />
+      {/* ✅ MACHINE IMAGE FROM PROVIDER */}
+      <Image source={getMachineImage(item)} style={styles.image} />
 
       <View style={styles.info}>
         <Text style={styles.title}>
-          {getMachineTypeLabel(item.machineType)}
+          {t(item.machineType)}
         </Text>
 
         <Text style={styles.text}>
@@ -207,7 +175,6 @@ console.log("USER UPAZILA:", upazila);
     </TouchableOpacity>
   );
 
-  // ---------------- LOADING ----------------
   if (loading) {
     return (
       <View style={styles.center}>
@@ -217,23 +184,17 @@ console.log("USER UPAZILA:", upazila);
     );
   }
 
-  // ---------------- UI ----------------
   return (
     <FlatList
       data={machines || []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       contentContainerStyle={{ padding: 15 }}
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <Text>{t("no_data")}</Text>
-        </View>
-      }
+      ListEmptyComponent={<Text>{t("no_data")}</Text>}
     />
   );
 }
 
-// ---------------- STYLES ----------------
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
@@ -248,24 +209,30 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3
   },
+
   image: {
-    width: 80,
-    height: 80,
-    resizeMode: "contain",
-    marginRight: 12
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    marginRight: 12,
+    backgroundColor: "#ddd"
   },
+
   info: {
     flex: 1
   },
+
   title: {
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 4
   },
+
   text: {
     fontSize: 14,
     marginBottom: 2
   },
+
   center: {
     flex: 1,
     justifyContent: "center",

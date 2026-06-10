@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
+  AppState,
 } from "react-native";
 
 import { useTranslation } from "react-i18next";
@@ -28,8 +29,20 @@ import {
 
 import { LinearGradient } from "expo-linear-gradient";
 
+import * as Notifications from "expo-notifications";
+import { Audio } from "expo-av";
+
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
+
+// Configure notifications for background
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 /* ================= BANGLA DIGITS ================= */
 const BN_DIGITS = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
@@ -44,7 +57,7 @@ const MONTHS = {
     "July","August","September","October","November","December"
   ],
   bn: [
-    "জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন",
+    "জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন",
     "জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"
   ],
 };
@@ -52,7 +65,7 @@ const MONTHS = {
 /* ================= MACHINE DEFAULT IMAGES ================= */
 const getMachineDefaultImage = (machineType) => {
   const type = (machineType || "").toLowerCase().trim();
-  
+
   switch(type) {
     case "tractor":
       return require("../../../assets/images/Machines/tractor.png");
@@ -71,6 +84,19 @@ const getMachineDefaultImage = (machineType) => {
   }
 };
 
+/* ================= SOUND FUNCTION ================= */
+const playSound = async () => {
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      require("../../../assets/sounds/notification.mp3")
+    );
+    await sound.playAsync();
+    setTimeout(() => sound.unloadAsync(), 1500);
+  } catch (e) {
+    console.log("Sound error:", e);
+  }
+};
+
 export default function ProviderBookingRequests() {
   const { t, i18n } = useTranslation();
   const [requests, setRequests] = useState([]);
@@ -78,14 +104,49 @@ export default function ProviderBookingRequests() {
   const provider = getAuth().currentUser;
   const isBn = i18n.language === "bn";
 
+  // Track seen bookings, app state, and initial payload load state
+  const seenBookings = useRef(new Map());
+  const appState = useRef(AppState.currentState);
+  const isFirstLoad = useRef(true);
+
   /* ================= FILTER FUTURE DATES ================= */
   const isFutureOrTodayDate = (dateStr) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const compareDate = new Date(dateStr);
     compareDate.setHours(0, 0, 0, 0);
+
     return compareDate >= today;
   };
+
+  // Setup background audio
+  useEffect(() => {
+    const setupBackgroundAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          staysActiveInBackground: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (error) {
+        console.log("Audio setup error:", error);
+      }
+    };
+    
+    setupBackgroundAudio();
+    
+    // Track app state
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      appState.current = nextAppState;
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   /* ================= FETCH ================= */
   useEffect(() => {
@@ -129,11 +190,35 @@ export default function ProviderBookingRequests() {
         })
       );
 
-      // Filter: Only show requests with at least one date from today to future
-      const filteredRequests = enriched.filter(request => {
-        if (!request.dates || request.dates.length === 0) return false;
-        return request.dates.some(date => isFutureOrTodayDate(date));
+      // Detect new bookings and trigger notification sound
+      enriched.forEach((item) => {
+        const prev = seenBookings.current.get(item.id);
+        if (!prev) {
+          seenBookings.current.set(item.id, item.createdAt?.seconds || Date.now());
+          
+          // Only trigger sounds for bookings incoming AFTER the screen is initialized
+          if (!isFirstLoad.current) {
+            triggerNotification(item);
+          }
+        }
       });
+
+      // Mark the initial data loading cycle as completed
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+      }
+
+      // Cleanup removed bookings
+      const currentIds = new Set(enriched.map(i => i.id));
+      for (let key of seenBookings.current.keys()) {
+        if (!currentIds.has(key)) {
+          seenBookings.current.delete(key);
+        }
+      }
+
+      const filteredRequests = enriched.filter(request =>
+        request.dates?.some(date => isFutureOrTodayDate(date))
+      );
 
       setRequests(filteredRequests);
     });
@@ -141,7 +226,21 @@ export default function ProviderBookingRequests() {
     return () => unsub();
   }, [provider]);
 
-  /* ================= DATE FORMAT (FULL MULTILINGUAL) ================= */
+  // Notification function
+  const triggerNotification = async (item) => {
+    await playSound();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "🚜 New Booking Request",
+        body: `${item.userName} booked ${item.machineType}`,
+        data: { bookingId: item.id },
+        sound: true,
+      },
+      trigger: null,
+    });
+  };
+
+  /* ================= FORMAT DATE ================= */
   const formatDate = (date) => {
     const d = new Date(date);
 
@@ -155,11 +254,9 @@ export default function ProviderBookingRequests() {
     return `${day} ${month} ${year}`;
   };
 
-  /* ================= TIME SLOT FORMAT ================= */
   const formatTime = (val) =>
     isBn ? toBanglaNumber(val) : val;
 
-  /* morning/noon label */
   const getSlotName = (slot) => {
     const start = parseInt(slot.split("-")[0]);
 
@@ -175,26 +272,23 @@ export default function ProviderBookingRequests() {
       await updateDoc(doc(db, "bookings", id), { status });
       Alert.alert(t("success"), t("booking_request_updated"));
     } catch (error) {
-      console.error("Error updating booking:", error);
       Alert.alert(t("error"), t("something_went_wrong"));
     }
   };
 
-  /* ================= GET MACHINE IMAGE ================= */
+  /* ================= MACHINE IMAGE ================= */
   const getMachineImage = (item) => {
-    // If machine has custom image in Firebase
     if (item.machineImage && item.machineImage.trim() !== "") {
       return { uri: item.machineImage };
     }
-    // Otherwise use default image based on machine type
     return getMachineDefaultImage(item.machineTypeFromDB || item.machineType);
   };
 
   /* ================= CARD ================= */
   const renderCard = (item) => {
-    // Filter dates to only show future/today dates
-    const futureDates = item.dates?.filter(date => isFutureOrTodayDate(date)) || [];
-    
+    const futureDates =
+      item.dates?.filter(date => isFutureOrTodayDate(date)) || [];
+
     if (futureDates.length === 0) return null;
 
     return (
@@ -226,13 +320,19 @@ export default function ProviderBookingRequests() {
         <Text style={styles.text}>👤 {t("farmer_name")}: {item.userName}</Text>
         <Text style={styles.text}>📞 {t("phone")}: {item.userPhone}</Text>
 
-        {/* DATE (Only future/today dates) */}
+        {/* NEW FIELDS */}
+        <Text style={styles.text}>📍 {t("land_address")}: {item.landAddress}</Text>
+        <Text style={styles.text}>📍{t("tillage_number")}: {item.tillageAmount}</Text>
+        <Text style={styles.text}>⚙️ {t("unit_of_charge_type")}: {t(item.chargeType)}</Text>
+        <Text style={styles.text}>💰 {t("total_charge")}: {item.totalCharge}</Text>
+        
+
+        {/* DATE */}
         <Text style={styles.text}>
-          📅 {t("dates")}:{" "}
-          {futureDates.map((d) => formatDate(d)).join(", ")}
+          📅 {t("dates")}: {futureDates.map(formatDate).join(", ")}
         </Text>
 
-        {/* TIME SLOT */}
+        {/* SLOT */}
         <Text style={styles.slotTitle}>⏰ {t("time_slot")}</Text>
 
         <View style={styles.slotWrap}>
@@ -247,8 +347,7 @@ export default function ProviderBookingRequests() {
               >
                 <View style={styles.slotCard}>
                   <Text style={styles.slotText}>
-                    {getSlotName(slot)}{" "}
-                    {formatTime(start)}:00 - {formatTime(end)}:00
+                    {getSlotName(slot)} {formatTime(start)}:00 - {formatTime(end)}:00
                   </Text>
                 </View>
               </LinearGradient>
@@ -272,6 +371,7 @@ export default function ProviderBookingRequests() {
             <Text style={styles.btnText}>❌ {t("deny")}</Text>
           </TouchableOpacity>
         </View>
+
       </LinearGradient>
     );
   };
@@ -279,11 +379,9 @@ export default function ProviderBookingRequests() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {requests.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="calendar-outline" size={80} color="#ccc" />
-          <Text style={styles.emptyText}>{t("no_booking_requests")}</Text>
-          <Text style={styles.emptySubText}>{t("no_future_requests")}</Text>
-        </View>
+        <Text style={styles.emptyText}>
+          {t("no_booking_requests")}
+        </Text>
       ) : (
         requests.map(renderCard)
       )}
@@ -296,27 +394,6 @@ const styles = StyleSheet.create({
   container: {
     padding: 15,
     paddingBottom: 100,
-  },
-
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 50,
-  },
-
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#999",
-    marginTop: 20,
-  },
-
-  emptySubText: {
-    fontSize: 14,
-    color: "#bbb",
-    marginTop: 10,
-    textAlign: "center",
   },
 
   card: {
@@ -420,5 +497,12 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+
+  emptyText: {
+    textAlign: "center",
+    marginTop: 50,
+    fontSize: 16,
+    color: "#999",
   },
 });

@@ -8,8 +8,8 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-import { LinearGradient } from 'expo-linear-gradient';
 
+import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
@@ -19,23 +19,48 @@ const screenWidth = Dimensions.get("window").width;
 const buttonSize = (screenWidth / 2) - 30;
 
 export default function ProviderDashboard({ navigation }) {
-  const { t, i18n } = useTranslation();
-
+  const { t } = useTranslation();
   const provider = getAuth().currentUser;
 
-  const [newNotificationCount, setNewNotificationCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  /* ================= REALTIME NOTIFICATION COUNT ================= */
+  /* ================= TODAY ================= */
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  /* ================= FETCH + FILTER ================= */
   useEffect(() => {
     if (!provider) return;
 
     const q = query(
       collection(db, "bookings"),
-      where("providerId", "==", provider.uid),
-      where("isRead", "==", false)
+      where("providerId", "==", provider.uid)
     );
+
     const unsub = onSnapshot(q, (snap) => {
-      setNewNotificationCount(snap.size);
+      const bookings = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
+      const filtered = bookings.filter((b) => {
+        /* ================= STATUS CHECK ================= */
+        const isPending =
+          (b.status || "").toLowerCase().trim() === "pending";
+
+        /* ================= DATE CHECK (TODAY + FUTURE) ================= */
+        const hasValidDate =
+          Array.isArray(b.dates) &&
+          b.dates.some((dateStr) => {
+            const d = new Date(dateStr);
+            d.setHours(0, 0, 0, 0);
+            return d >= today;
+          });
+
+        return isPending && hasValidDate;
+      });
+
+      setPendingCount(filtered.length);
     });
 
     return () => unsub();
@@ -43,18 +68,14 @@ export default function ProviderDashboard({ navigation }) {
 
   return (
     <LinearGradient
-      colors={['#FFB6C1', '#ADD8E6', '#FFC0CB']} // Light Pink to Light Blue to Soft Pink
+      colors={["#FFB6C1", "#ADD8E6", "#FFC0CB"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.gradient}
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingBottom: 150 },
-        ]}
-      >
-        {/* CURRENT STATUS CARD */}
+      <ScrollView contentContainerStyle={styles.container}>
+
+        {/* STATUS CARD */}
         <TouchableOpacity
           style={styles.statusCard}
           onPress={() => navigation.navigate("ProviderCurrentStatus")}
@@ -62,10 +83,12 @@ export default function ProviderDashboard({ navigation }) {
           <Image
             source={require("../../../assets/images/Dashboard/Current Status.png")}
             style={styles.statusImage}
-            resizeMode="contain"
           />
+
           <View>
-            <Text style={styles.statusTitle}>{t("current_status")}</Text>
+            <Text style={styles.statusTitle}>
+              {t("current_status")}
+            </Text>
             <Text style={styles.statusSubtitle}>
               {t("check_machine_availability")}
             </Text>
@@ -74,6 +97,8 @@ export default function ProviderDashboard({ navigation }) {
 
         {/* ROW 1 */}
         <View style={styles.row}>
+
+          {/* ADD MACHINERY */}
           <TouchableOpacity
             style={styles.button}
             onPress={() => navigation.navigate("AddMachinery")}
@@ -81,37 +106,32 @@ export default function ProviderDashboard({ navigation }) {
             <Image
               source={require("../../../assets/images/add.png")}
               style={styles.icon}
-              resizeMode="contain"
             />
             <Text style={styles.label}>{t("add_machinery")}</Text>
           </TouchableOpacity>
 
-          {/* NOTIFICATION BUTTON WITH BADGE */}
+          {/* BOOKING REQUESTS */}
           <TouchableOpacity
             style={styles.button}
-            onPress={() => navigation.navigate("ProviderNotification")}
+            onPress={() => navigation.navigate("ProviderBookingRequests")}
           >
             <Image
-              source={require("../../../assets/images/Dashboard/notify.png")}
+              source={require("../../../assets/Dashboard/inventory.jpg")}
               style={styles.icon}
-              resizeMode="contain"
             />
 
-            {/* 🔔 BADGE */}
-            {newNotificationCount > 0 && (
+            <Text style={styles.label}>{t("booking_requests")}</Text>
+
+            {/* 🔴 BADGE */}
+            {pendingCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
-                  {i18n.language === "bn"
-                    ? newNotificationCount
-                        .toString()
-                        .replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d])
-                    : newNotificationCount}
+                  {pendingCount > 99 ? "99+" : pendingCount}
                 </Text>
               </View>
             )}
-
-            <Text style={styles.label}>{t("notification")}</Text>
           </TouchableOpacity>
+
         </View>
 
         {/* ROW 2 */}
@@ -123,7 +143,6 @@ export default function ProviderDashboard({ navigation }) {
             <Image
               source={require("../../../assets/images/Dashboard/bookings.png")}
               style={styles.icon}
-              resizeMode="contain"
             />
             <Text style={styles.label}>{t("my_bookings")}</Text>
           </TouchableOpacity>
@@ -135,26 +154,11 @@ export default function ProviderDashboard({ navigation }) {
             <Image
               source={require("../../../assets/images/Dashboard/contact.png")}
               style={styles.icon}
-              resizeMode="contain"
             />
             <Text style={styles.label}>{t("my_contact")}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ROW 3 */}
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => navigation.navigate("ProviderBookingRequests")}
-          >
-            <Image
-              source={require("../../../assets/Dashboard/inventory.jpg")}
-              style={styles.icon}
-              resizeMode="contain"
-            />
-            <Text style={styles.label}>{t("booking_requests")}</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -169,69 +173,50 @@ const styles = StyleSheet.create({
   container: {
     padding: 15,
     flexGrow: 1,
-    justifyContent: "center",
     alignItems: "center",
   },
 
   statusCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 12,
     padding: 20,
     marginBottom: 25,
-    elevation: 4,
     width: "100%",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
   },
 
   statusImage: {
     width: 60,
     height: 60,
-    marginRight: 20,
+    marginRight: 15,
   },
 
   statusTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#333",
   },
 
   statusSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#555",
-    marginTop: 4,
   },
 
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
     width: "100%",
+    marginBottom: 20,
   },
 
   button: {
     width: buttonSize,
     height: buttonSize,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 3,
     position: "relative",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
   },
 
   icon: {
@@ -241,13 +226,11 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 14,
     textAlign: "center",
-    color: "#333",
   },
 
-  /* 🔔 BADGE */
+  /* BADGE */
   badge: {
     position: "absolute",
     top: 8,

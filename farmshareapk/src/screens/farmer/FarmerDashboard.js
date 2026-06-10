@@ -8,10 +8,10 @@ import {
   Dimensions,
   ScrollView,
   Alert,
-  ImageBackground
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { logoutUser } from "../../firebase/authService";
+import { LinearGradient } from "expo-linear-gradient";
 
 const screenWidth = Dimensions.get("window").width;
 const buttonSize = (screenWidth / 2) - 30;
@@ -34,17 +34,15 @@ export default function FarmerDashboard({ navigation }) {
   };
 
   return (
-    <ImageBackground
-      source={require("../../../assets/images/background6.png")} // ✅ your background image
+    <LinearGradient
+      colors={["#ffb6c1", "#6a5acd"]}   // 💗 pink → 💙 blue gradient
       style={styles.background}
-      resizeMode="cover"
     >
-      {/* OPTIONAL OVERLAY (improves readability) */}
+      {/* OPTIONAL OVERLAY */}
       <View style={styles.overlay}>
         <ScrollView
           contentContainerStyle={{ alignItems: "center", paddingBottom: 30 }}
         >
-
           {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>{t("farmer_dashboard")}</Text>
@@ -106,14 +104,10 @@ export default function FarmerDashboard({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* LOGOUT */}
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>{t("logout")}</Text>
-          </TouchableOpacity>
-
+       
         </ScrollView>
       </View>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
@@ -124,7 +118,7 @@ const styles = StyleSheet.create({
 
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.15)", // 🔥 soft glass effect
+    backgroundColor: "rgba(255,255,255,0.10)", // soft glass effect
   },
 
   header: {
@@ -133,71 +127,62 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 30,
-    marginBottom: 30
+    marginBottom: 30,
   },
 
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#000"
+    color: "#000",
   },
 
   langButton: {
-    backgroundColor: "#ADD8E6",
+    backgroundColor: "#ffffff80",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8
+    borderRadius: 8,
   },
 
   langText: {
     fontSize: 14,
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
-  /* ROW */
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "90%",
-
-    // ✅ vertical spacing between rows
     marginBottom: 25,
-      
-
-  // ✅ perfect spacing between columns
-  columnGap: 15,
+    columnGap: 15,
   },
 
-  /* BUTTON */
   button: {
     width: buttonSize,
     height: buttonSize,
-    backgroundColor: "rgba(255,255,255,0.85)", // 🔥 glass style
+    backgroundColor: "rgba(255,255,255,0.85)",
     borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
     padding: 10,
-
-    // ✅ vertical spacing between buttons
     marginVertical: 5,
 
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
-    elevation: 5
+    elevation: 5,
   },
 
   icon: {
     width: 60,
     height: 60,
-    marginBottom: 10
+    marginBottom: 10,
   },
 
   label: {
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "center"
+    textAlign: "center",
   },
 
   logoutButton: {
@@ -205,12 +190,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff4d4d",
     paddingVertical: 12,
     paddingHorizontal: 40,
-    borderRadius: 10
+    borderRadius: 10,
   },
 
   logoutText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600"
-  }
+    fontWeight: "600",
+  },
 });
