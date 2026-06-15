@@ -6,10 +6,19 @@ import {
   FlatList,
   ActivityIndicator,
   Image,
-  TouchableOpacity
+  TouchableOpacity,
 } from "react-native";
+
 import { useTranslation } from "react-i18next";
-import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
 import { db, auth } from "../../firebase/firebaseConfig";
 import { bdLocations } from "../../data/bdLocation";
 import { useNavigation } from "@react-navigation/native";
@@ -36,7 +45,11 @@ export default function SearchResult({ route }) {
   const loadData = async () => {
     try {
       const user = auth.currentUser;
-      if (!user) return;
+
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const userSnap = await getDoc(doc(db, "users", user.uid));
 
@@ -46,6 +59,7 @@ export default function SearchResult({ route }) {
       }
     } catch (err) {
       console.log("LOAD ERROR:", err);
+      setLoading(false);
     }
   };
 
@@ -61,7 +75,11 @@ export default function SearchResult({ route }) {
       );
 
       let snap = await getDocs(q1);
-      data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      data = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
       if (data.length === 0) {
         let q2 = query(
@@ -71,7 +89,11 @@ export default function SearchResult({ route }) {
         );
 
         snap = await getDocs(q2);
-        data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        data = snap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
       }
 
       if (data.length === 0) {
@@ -81,7 +103,11 @@ export default function SearchResult({ route }) {
         );
 
         snap = await getDocs(q3);
-        data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        data = snap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
       }
 
       setMachines(data);
@@ -93,20 +119,56 @@ export default function SearchResult({ route }) {
     }
   };
 
-  // ✅ NEW: Smart image selector
-  const getMachineImage = (item) => {
-    // 🔥 Firebase uploaded image (most important)
-    if (item?.imageUrl) return { uri: item.imageUrl };
-    if (item?.image) return { uri: item.image };
-    if (item?.photo) return { uri: item.photo };
-    if (item?.machineImage) return { uri: item.machineImage };
+  // Default image by machine type
+  const getDefaultMachineImage = (type) => {
+    switch (normalize(type)) {
+      case "tractor":
+        return require("../../../assets/images/Machines/tractor.png");
 
-    // fallback local image
-    return require("../../../assets/images/add.png");
+      case "powertiller":
+        return require("../../../assets/images/Machines/powertiller.png");
+
+      case "reaper":
+        return require("../../../assets/images/Machines/reaper.png");
+
+      case "sprayer":
+        return require("../../../assets/images/Machines/sprayer.jpg");
+
+      case "thresher":
+        return require("../../../assets/images/Machines/thresher.png");
+
+      case "combine harvester":
+        return require("../../../assets/images/Machines/combine harvester.png");
+
+      default:
+        return require("../../../assets/images/add.png");
+    }
+  };
+
+  // Firebase image OR default image
+  const getMachineImage = (item) => {
+    const firebaseImage =
+      item?.imageUrl ||
+      item?.image ||
+      item?.photo ||
+      item?.machineImage;
+
+    if (
+      firebaseImage &&
+      typeof firebaseImage === "string" &&
+      firebaseImage.trim() !== ""
+    ) {
+      return {
+        uri: firebaseImage,
+      };
+    }
+
+    return getDefaultMachineImage(item.machineType);
   };
 
   const getDistrictLabel = (districtKey) => {
     if (!districtKey) return "";
+
     return isBn
       ? bdLocations[districtKey]?.bn || districtKey
       : districtKey;
@@ -121,23 +183,36 @@ export default function SearchResult({ route }) {
       (u) => normalize(u?.en) === normalize(upazilaEn)
     );
 
-    return isBn ? (upazilaObj?.bn || upazilaEn) : (upazilaObj?.en || upazilaEn);
+    return isBn
+      ? upazilaObj?.bn || upazilaEn
+      : upazilaObj?.en || upazilaEn;
   };
 
   const formatTaka = (amount) => {
-    if (!amount) return isBn ? "০ টাকা" : "0 Taka";
-    return isBn ? `${amount} টাকা` : `${amount} Taka`;
+    if (!amount) {
+      return isBn ? "০ টাকা" : "0 Taka";
+    }
+
+    return isBn
+      ? `${amount} টাকা`
+      : `${amount} Taka`;
   };
 
-  // ---------------- RENDER ITEM ----------------
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => navigation.navigate("BookingDetails", { machine: item })}
+      activeOpacity={0.8}
+      onPress={() =>
+        navigation.navigate("BookingDetails", {
+          machine: item,
+        })
+      }
     >
-      {/* ✅ MACHINE IMAGE FROM PROVIDER */}
-      <Image source={getMachineImage(item)} style={styles.image} />
+      <Image
+        source={getMachineImage(item)}
+        style={styles.image}
+        resizeMode="cover"
+      />
 
       <View style={styles.info}>
         <Text style={styles.title}>
@@ -157,7 +232,12 @@ export default function SearchResult({ route }) {
         </Text>
 
         <Text style={styles.text}>
-          {t("upazilla")}: {getUpazillaLabel(item.district, item.upazila)}
+          {t("upazilla")}:
+          {" "}
+          {getUpazillaLabel(
+            item.district,
+            item.upazila
+          )}
         </Text>
 
         <Text style={styles.text}>
@@ -165,14 +245,21 @@ export default function SearchResult({ route }) {
         </Text>
 
         <Text style={styles.text}>
-          {t("charge_per_decimal")}: {formatTaka(item.chargePerDecimal)}
+          {t("charge_per_decimal")}:
+          {" "}
+          {formatTaka(item.chargePerDecimal)}
         </Text>
 
         <Text style={styles.text}>
-          {t("charge_per_bigha")}: {formatTaka(item.chargePerBigha)}
+          {t("charge_per_bigha")}:
+          {" "}
+          {formatTaka(item.chargePerBigha)}
         </Text>
+
         <Text style={styles.text}>
-          {t("charge_per_hour")}: {formatTaka(item.chargePerHour)}
+          {t("charge_per_hour")}:
+          {" "}
+          {formatTaka(item.chargePerHour)}
         </Text>
       </View>
     </TouchableOpacity>
@@ -189,11 +276,13 @@ export default function SearchResult({ route }) {
 
   return (
     <FlatList
-      data={machines || []}
+      data={machines}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       contentContainerStyle={{ padding: 15 }}
-      ListEmptyComponent={<Text>{t("no_data")}</Text>}
+      ListEmptyComponent={
+        <Text>{t("no_data")}</Text>
+      }
     />
   );
 }
@@ -201,16 +290,11 @@ export default function SearchResult({ route }) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
-    alignItems: "flex-start",
     backgroundColor: "#e6f2ff",
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 3
+    elevation: 3,
   },
 
   image: {
@@ -218,28 +302,26 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 10,
     marginRight: 12,
-    backgroundColor: "#ddd"
   },
 
   info: {
-    flex: 1
+    flex: 1,
   },
 
   title: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 4
+    marginBottom: 4,
   },
 
   text: {
     fontSize: 14,
-    marginBottom: 2
+    marginBottom: 2,
   },
 
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 50
-  }
+  },
 });

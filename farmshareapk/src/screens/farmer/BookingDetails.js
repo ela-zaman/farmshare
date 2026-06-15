@@ -384,7 +384,9 @@ const fetchProviderImage = async () => {
             <Text>{t("village")}: {machine?.village}</Text>
             <Text>{t("phone")}: {machine?.phone}</Text>
             <Text>{t("charge_per_bigha")}: {isBn ? toBanglaNumber(machine?.chargePerBigha) : machine?.chargePerBigha}</Text>
-            <Text>{t("charge_per_hour")}: {isBn ? toBanglaNumber(machine?.chargePerHour) : machine?.chargePerHour}</Text>
+            <Text>{t("charge_per_decimal")}: {isBn ? toBanglaNumber(machine?.chargePerDecimal) : machine?.chargePerDecimal}</Text>
+            
+           
       
           </View>
           
