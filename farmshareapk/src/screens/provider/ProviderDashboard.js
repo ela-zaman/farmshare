@@ -104,7 +104,7 @@ export default function ProviderDashboard({ navigation }) {
             onPress={() => navigation.navigate("AddMachinery")}
           >
             <Image
-              source={require("../../../assets/images/add.png")}
+              source={require("../../../assets/images/Machines/machine.jpg")}
               style={styles.icon}
             />
             <Text style={styles.label}>{t("add_machinery")}</Text>
@@ -116,7 +116,7 @@ export default function ProviderDashboard({ navigation }) {
             onPress={() => navigation.navigate("ProviderBookingRequests")}
           >
             <Image
-              source={require("../../../assets/Dashboard/inventory.jpg")}
+              source={require("E:/farmshare/farmshare/farmshareapk/assets/images/Dashboard/request.png")}
               style={styles.icon}
             />
 
@@ -220,9 +220,10 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    width: 60,
-    height: 60,
+    width: 100,
+    height: 100,
     marginBottom: 10,
+     resizeMode: "contain",
   },
 
   label: {

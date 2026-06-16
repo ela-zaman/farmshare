@@ -106,7 +106,18 @@
   "per_hour": "প্রতি ঘণ্টা",
     "current":"চলমান",
     "all": "সব",
-    "expired": "মেয়াদ উত্তীর্ণ"
+    "expired": "মেয়াদ উত্তীর্ণ",
+    "accept": "গ্রহণ",
+    "deny": "বাতিল",
+    
+  "machine_calendar": "মেশিন ক্যালেন্ডার",
+  "booked_slots_for": "বুকড স্লট: ",
+  "booking_request_updated": "বুকিং রিকুয়েস্ট আপডেট করা হয়েছে",
+  "no_booking_request":" কোন বুকিং রিকুয়েস্ট নেই",
+  "see_booking_info": " বুকিং তথ্য দেখার জন্য স্লট চাপুন",
+  "bigha": "বিঘা",
+  "decimal":"শতক",
+  "booking_info": "বুকিং তথ্য"
 
   
 

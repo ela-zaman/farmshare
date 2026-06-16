@@ -47,8 +47,10 @@ Notifications.setNotificationHandler({
 /* ================= BANGLA DIGITS ================= */
 const BN_DIGITS = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
 
-const toBanglaNumber = (num) =>
-  num?.toString().split("").map(d => BN_DIGITS[d] || d).join("");
+const toBanglaNumber = (num) => {
+  if (num === null || num === undefined) return "";
+  return num.toString().replace(/\d/g, (d) => BN_DIGITS[d]);
+};
 
 /* ================= MONTH TRANSLATION ================= */
 const MONTHS = {
@@ -186,6 +188,7 @@ export default function ProviderBookingRequests() {
             userPhoto: userData.photo || null,
             machineImage: machineData.machineImage || null,
             machineTypeFromDB: machineData.machineType || item.machineType,
+            machineModel: machineData.machineModel || "",
           };
         })
       );
@@ -314,7 +317,8 @@ export default function ProviderBookingRequests() {
           />
         </View>
 
-        <Text style={styles.title}>{t(item.machineType)}</Text>
+        <Text style={styles.title}>{t(item.machineType)}{": "}{t("machine_model")}: {item.machineModel || "N/A"}</Text>
+       
 
         {/* USER INFO */}
         <Text style={styles.text}>👤 {t("farmer_name")}: {item.userName}</Text>
@@ -322,9 +326,16 @@ export default function ProviderBookingRequests() {
 
         {/* NEW FIELDS */}
         <Text style={styles.text}>📍 {t("land_address")}: {item.landAddress}</Text>
-        <Text style={styles.text}>📍{t("tillage_number")}: {item.tillageAmount}</Text>
+       <Text style={styles.text}>
+  📍{t("tillage_number")}: {toBanglaNumber(item.tillageAmount)}
+</Text>
+        <Text style={styles.text}>
+  📍{t("land_size")}: {toBanglaNumber(item.landSize)}
+</Text>
         <Text style={styles.text}>⚙️ {t("unit_of_charge_type")}: {t(item.chargeType)}</Text>
-        <Text style={styles.text}>💰 {t("total_charge")}: {item.totalCharge}</Text>
+       <Text style={styles.text}>
+  💰 {t("total_charge")}: {toBanglaNumber(item.totalCharge)}
+</Text>
         
 
         {/* DATE */}
@@ -347,7 +358,7 @@ export default function ProviderBookingRequests() {
               >
                 <View style={styles.slotCard}>
                   <Text style={styles.slotText}>
-                    {getSlotName(slot)} {formatTime(start)}:00 - {formatTime(end)}:00
+                    {getSlotName(slot)} {toBanglaNumber(start)}:০০ - {toBanglaNumber(end)}:০০
                   </Text>
                 </View>
               </LinearGradient>
@@ -409,8 +420,8 @@ const styles = StyleSheet.create({
   },
 
   machineImage: {
-    width: 170,
-    height: 120,
+    width: 220,
+    height: 170,
     borderRadius: 15,
     backgroundColor: "#fff",
   },

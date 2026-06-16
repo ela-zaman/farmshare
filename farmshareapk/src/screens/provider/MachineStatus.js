@@ -16,6 +16,8 @@ import { Calendar, LocaleConfig } from "react-native-calendars";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { useTranslation } from "react-i18next";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 
 // ---------------- Locale ----------------
 LocaleConfig.locales["en"] = {
@@ -87,6 +89,7 @@ export default function MachineStatus({ route }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [machine, setMachine] = useState(null);
+  const [user, setUser] = useState(null);
 
   // Fetch bookings - moved before conditional return
   useEffect(() => {
@@ -129,7 +132,27 @@ export default function MachineStatus({ route }) {
 
     fetchBookings();
   }, [machineId]);
+useEffect(() => {
+  const fetchUser = async () => {
+    const userId = selectedBooking?.userId;
+    if (!userId) return;
 
+    try {
+      const ref = doc(db, "users", userId);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        setUser(snap.data());
+      } else {
+        setUser(null);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  fetchUser();
+}, [selectedBooking]);
   // Fetch machine details - moved before conditional return
   useEffect(() => {
     const fetchMachine = async () => {
@@ -158,6 +181,12 @@ export default function MachineStatus({ route }) {
     const bn = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
     return num.toString().split("").map(d => bn[d] || d).join("");
   };
+
+  const getUserImage = () => {
+  if (user?.photo) return { uri: user.photo };
+ 
+  return require("../../../assets/images/add.png");
+};
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
@@ -214,7 +243,21 @@ export default function MachineStatus({ route }) {
       setModalVisible(true);
     }
   };
+const getLandSizeWithUnit = (size, chargeType) => {
+  if (size === null || size === undefined) return "-";
 
+  const formattedSize = formatMultilingualNumber(size);
+
+  if (chargeType === "per_bigha") {
+    return `${formattedSize} ${t("bigha") || "Bigha"}`;
+  }
+
+  if (chargeType === "per_decimal") {
+    return `${formattedSize} ${t("decimal") || "Decimal"}`;
+  }
+
+  return formattedSize;
+};
   // ---------------- Mark Dates ----------------
   const markedDates = {};
   const today = new Date().toISOString().split("T")[0];
@@ -263,34 +306,100 @@ export default function MachineStatus({ route }) {
             </View>
 
             <Calendar
-              key={i18n.language}
-              minDate={today}
-              markingType="custom"
-              markedDates={markedDates}
-              onDayPress={(d)=>{ if(d.dateString >= today) setSelectedDate(d.dateString); }}
-              dayComponent={({ date, marking }) => {
-                if (!date) return null;
-                const isPast = date.dateString < today;
-                const style = marking?.customStyles || {};
-                return (
-                  <TouchableOpacity
-                    disabled={isPast}
-                    style={[styles.dayContainer, style.container, isPast && {backgroundColor:"#eee"}]}
-                    onPress={()=>!isPast && setSelectedDate(date.dateString)}
-                  >
-                    <Text style={{color:isPast?"#ccc":style.text?.color||"#000", fontWeight: style.text?.fontWeight||"normal"}}>
-                      {formatMultilingualNumber(date.day)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              }}
-            />
+  key={i18n.language}
+  minDate={today}
+  markingType="custom"
+  markedDates={markedDates}
+
+  // ✅ Custom multilingual month + year
+  renderHeader={(date) => {
+    const month =
+      isBn
+        ? LocaleConfig.locales.bn.monthNames[date.getMonth()]
+        : LocaleConfig.locales.en.monthNames[date.getMonth()];
+
+    const year = isBn
+      ? toBanglaNumber(date.getFullYear())
+      : date.getFullYear();
+
+    return (
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "bold",
+          marginVertical: 10,
+        }}
+      >
+        {month} {year}
+      </Text>
+    );
+  }}
+
+  onDayPress={(d) => {
+    if (d.dateString >= today) setSelectedDate(d.dateString);
+  }}
+
+  dayComponent={({ date, marking }) => {
+    if (!date) return null;
+
+    const isPast = date.dateString < today;
+    const style = marking?.customStyles || {};
+
+    return (
+      <TouchableOpacity
+        disabled={isPast}
+        style={[
+          styles.dayContainer,
+          style.container,
+          isPast && { backgroundColor: "#eee" },
+        ]}
+        onPress={() =>
+          !isPast && setSelectedDate(date.dateString)
+        }
+      >
+        <Text
+          style={{
+            color: isPast
+              ? "#ccc"
+              : style.text?.color || "#000",
+            fontWeight:
+              style.text?.fontWeight || "normal",
+          }}
+        >
+          {formatMultilingualNumber(date.day)}
+        </Text>
+      </TouchableOpacity>
+    );
+  }}
+/>
 
             {selectedDate && (
               <Text style={styles.subtitle}>
                 {t("booked_slots_for")} {formatDate(selectedDate)}
               </Text>
             )}
+            <MaskedView
+  maskElement={
+    <Text style={styles.info}>
+      {t("see_booking_info")}
+    </Text>
+  }
+>
+  <LinearGradient
+    colors={["#ff4fd8", "#4f8cff"]} // Pink → Blue
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+  >
+    <Text
+      style={[
+        styles.info,
+        { opacity: 0 }
+      ]}
+    >
+      {t("see_booking_info")}
+    </Text>
+  </LinearGradient>
+</MaskedView>
           </>
         }
 
@@ -309,24 +418,63 @@ export default function MachineStatus({ route }) {
       />
 
       <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalBg}>
-          <View style={styles.modalBox}>
-            {selectedBooking && (
-              <>
-                <Text style={styles.modalTitle}>{t("booking_info")}</Text>
-                <Text>{t("farmer_name")}: {selectedBooking.userName}</Text>
-                <Text>{t("phone")}: {selectedBooking.userPhone}</Text>
-                <Text>{t("land_address")}: {selectedBooking.landAddress}</Text>
-                <Text>{t("land_size")}: {formatMultilingualNumber(selectedBooking.landSize)} {t("bigha")}</Text>
-                <Text>{t("tillage_number")}: {formatMultilingualNumber(selectedBooking.tillageAmount)}</Text>
-                <Text>{t("charge_type")}: {t(selectedBooking.chargeType)}</Text>
-                <Text>{t("total_charge")}: {formatMultilingualNumber(selectedBooking.totalCharge)} {t("taka")}</Text>
-                <Button title={t("close")} onPress={()=>setModalVisible(false)} />
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+  <View style={styles.modalBg}>
+    <LinearGradient
+      colors={["#4f8cff", "#ff4fd8"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.modalBox}
+    >
+     
+      {selectedBooking && (
+        <>
+          <Text style={styles.modalTitle}>
+            {t("booking_info")}
+          </Text>
+ <View style={styles.userHeader}>
+  <Image source={getUserImage()} style={styles.userImage} />
+</View>
+          <Text style={styles.modalText}>
+            {t("farmer_name")}: {selectedBooking.userName}
+          </Text>
+
+          <Text style={styles.modalText}>
+            {t("phone")}: {selectedBooking.userPhone}
+          </Text>
+
+          <Text style={styles.modalText}>
+            {t("land_address")}: {selectedBooking.landAddress}
+          </Text>
+
+          <Text style={styles.modalText}>
+            {t("land_size")}: {getLandSizeWithUnit(selectedBooking?.landSize, selectedBooking?.chargeType)}
+          </Text>
+
+          <Text style={styles.modalText}>
+            {t("tillage_number")}: {formatMultilingualNumber(selectedBooking.tillageAmount)}
+          </Text>
+
+          <Text style={styles.modalText}>
+            {t("charge_type")}: {t(selectedBooking.chargeType)}
+          </Text>
+
+          <Text style={styles.modalText}>
+            {t("total_charge")}: {formatMultilingualNumber(selectedBooking.totalCharge)} {t("taka")}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => setModalVisible(false)}
+          >
+            <Text style={styles.closeText}>
+              {t("close")}
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </LinearGradient>
+  </View>
+</Modal>
     </>
   );
 }
@@ -335,15 +483,70 @@ export default function MachineStatus({ route }) {
 const styles = StyleSheet.create({
   center:{flex:1,justifyContent:"center",alignItems:"center"},
   machineHeader:{alignItems:"center",marginBottom:15},
-  image:{width:100,height:100,resizeMode:"contain"},
+  image:{width:200,height:200,resizeMode:"contain"},
   machineType:{fontSize:16,fontWeight:"bold",marginTop:5},
   calendarTitle:{fontSize:18,fontWeight:"bold",marginTop:5},
   subtitle:{marginTop:10,fontWeight:"bold"},
+  info: {
+  fontSize: 18,
+  fontWeight: "bold",
+},
+userHeader: {
+  width: "100%",
+  flexDirection: "row",
+  justifyContent: "flex-end",
+  marginBottom: 10,
+},
+
+userImage: {
+  width: 100,
+  height: 100,
+  borderRadius: 27,
+  borderWidth: 2,
+  borderColor: "#fff",
+
+},
   dayContainer:{width:35,height:35,justifyContent:"center",alignItems:"center",borderRadius:18},
   slot:{padding:12,marginVertical:5,borderRadius:10},
   booked:{backgroundColor:"#ff4d4d"},
   available:{backgroundColor:"#e6f0ff"},
   modalBg:{flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"rgba(0,0,0,0.5)"},
   modalBox:{width:"85%",backgroundColor:"#fff",padding:20,borderRadius:12},
-  modalTitle:{fontSize:18,fontWeight:"bold",marginBottom:10}
+  modalTitle:{fontSize:18,fontWeight:"bold",marginBottom:10},
+  modalBox: {
+  width: "90%",
+  padding: 25,
+  borderRadius: 28,
+  overflow: "hidden",
+  elevation: 10,
+},
+
+modalTitle: {
+  color: "white",
+  fontSize: 22,
+  fontWeight: "bold",
+  textAlign: "center",
+  marginBottom: 18,
+},
+
+modalText: {
+  color: "white",
+  fontSize: 16,
+  marginBottom: 10,
+},
+
+closeBtn: {
+  marginTop: 20,
+  alignSelf: "center",
+  backgroundColor: "rgba(255,255,255,0.25)",
+  paddingHorizontal: 30,
+  paddingVertical: 12,
+  borderRadius: 30,
+},
+
+closeText: {
+  color: "white",
+  fontWeight: "bold",
+  fontSize: 16,
+},
 });

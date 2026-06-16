@@ -109,7 +109,18 @@
   "you_have_new_request": "You have received a new booking request",
   "unknown": "Unknown",
   "total_charge": "Total Charge",
-  "per_hour": "Per Hour"
+  "per_hour": "Per Hour",
+  "accept": "Accept",
+  "deny": "Deny",
+  "machine_calendar": "Machine Calender",
+  "booked_slots_for": "Booked Slots for: ",
+   "booking_request_updated": "Booking Request Updated",
+  "no_booking_request":" There is no booking request ",
+  "see_booking_info": "Press booking slot to see booking info",
+  "bigha": "Bigha",
+  "decimal":"Decimal",
+  "booking_info": "Booking Info"
+
   
  
 
