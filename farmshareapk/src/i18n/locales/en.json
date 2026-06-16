@@ -119,7 +119,13 @@
   "see_booking_info": "Press booking slot to see booking info",
   "bigha": "Bigha",
   "decimal":"Decimal",
-  "booking_info": "Booking Info"
+  "booking_info": "Booking Info",
+  "edit_details": "Edit Details",
+  "save_changes":"Save Changes",
+  "update_machine": "Update Machine",
+  "fill_required_fields": "Fill Required Fields",
+  "choose_machine_to_edit": "Choose Machine To Edit",
+  "edit_profile": "Edit Profile"
 
   
  

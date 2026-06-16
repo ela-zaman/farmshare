@@ -117,8 +117,13 @@
   "see_booking_info": " বুকিং তথ্য দেখার জন্য স্লট চাপুন",
   "bigha": "বিঘা",
   "decimal":"শতক",
-  "booking_info": "বুকিং তথ্য"
-
+  "booking_info": "বুকিং তথ্য",
+  "edit_details": "তথ্য পরিবর্তন করুন",
+  "save_changes":"তথ্য সংরক্ষন করুন",
+"update_machine": "মেশিন আপডেট করুন",
+"fill_required_fields": "প্রতিটি ঘর পূরণ করুন",
+"choose_machine_to_edit": "তথ্য পরিবর্তনের জন্য মেশিন নির্বাচন করুন",
+"edit_profile": "তথ্য পরিবর্তন করুন"
   
 
 }

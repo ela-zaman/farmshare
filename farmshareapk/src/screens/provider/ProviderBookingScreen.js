@@ -193,11 +193,11 @@ export default function ProviderBookingScreen() {
       return;
     }
 
-    // 🔍 Check if contact already exists
+    // 🔍 check duplicate in NEW collection
     const q = query(
-      collection(db, "contacts"),
-      where("phone", "==", phone),
-      where("providerId", "==", provider.uid)
+      collection(db, "providerContact"),
+      where("providerId", "==", provider.uid),
+      where("farmerId", "==", item.userId)
     );
 
     const snap = await getDocs(q);
@@ -207,21 +207,22 @@ export default function ProviderBookingScreen() {
       return;
     }
 
-    // 💾 Save if not exists
-    await addDoc(collection(db, "contacts"), {
-      name: item.userName,
-      phone: phone,
+    // 💾 SAVE into providerContact collection
+    await addDoc(collection(db, "providerContact"), {
       providerId: provider.uid,
+      farmerId: item.userId,
+      farmerName: item.userName,
+      phone: phone,
+      photo: item.userPhoto || null,
       createdAt: serverTimestamp(),
     });
 
-    Alert.alert("Success", "Saved to contacts");
+    Alert.alert("Success", "Saved to provider contacts");
   } catch (e) {
     console.log(e);
     Alert.alert("Error", "Failed to save contact");
   }
 };
-
   /* ================= FILTER ================= */
 
   const sortedBookings = useMemo(() => {

@@ -6,93 +6,78 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  Linking,
   Alert,
+  Linking,
 } from "react-native";
 
 import { useTranslation } from "react-i18next";
-import { collection, query, where, onSnapshot, getDoc, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { getAuth } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function ProviderMyContact({ navigation }) {
+export default function ProviderMyContact() {
   const { t } = useTranslation();
   const provider = getAuth().currentUser;
 
   const [contacts, setContacts] = useState([]);
 
-  /* ================= REALTIME CONTACTS ================= */
+  // ================= REALTIME CONTACTS =================
   useEffect(() => {
     if (!provider) return;
 
     const q = query(
-      collection(db, "contacts"),
+      collection(db, "providerContact"),
       where("providerId", "==", provider.uid)
     );
 
-    const unsub = onSnapshot(q, async (snap) => {
-      const raw = snap.docs.map((d) => ({
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
       }));
 
-      const enriched = await Promise.all(
-        raw.map(async (c) => {
-          try {
-            const u = await getDoc(doc(db, "users", c.userId));
-            return {
-              ...c,
-              name: u.exists() ? u.data().name : "Unknown",
-              phone: u.exists() ? u.data().phone : "",
-              photo: u.exists() ? u.data().photo : null,
-            };
-          } catch (e) {
-            return c;
-          }
-        })
-      );
-
-      setContacts(enriched);
+      setContacts(data);
     });
 
     return () => unsub();
   }, [provider]);
 
-  /* ================= CALL ================= */
+  // ================= CALL =================
   const handleCall = (phone) => {
-    if (!phone) return Alert.alert(t("error"), t("no_phone"));
+    if (!phone) {
+      Alert.alert(t("error"), t("no_phone"));
+      return;
+    }
     Linking.openURL(`tel:${phone}`);
   };
 
-  /* ================= MESSAGE ================= */
- 
+  // ================= IMAGE =================
+  const getImage = (photo) => {
+    if (!photo) return require("../../../assets/images/add.png");
+    return { uri: photo };
+  };
 
-  /* ================= IMAGE ================= */
-  const getImage = (photo) =>
-    photo ? { uri: photo } : require("../../../assets/images/add.png");
-
-  /* ================= RENDER ITEM ================= */
+  // ================= RENDER ITEM =================
   const renderItem = ({ item }) => (
     <View style={styles.card}>
 
       {/* LEFT: IMAGE */}
       <Image source={getImage(item.photo)} style={styles.avatar} />
 
-      {/* CENTER: NAME + PHONE */}
+      {/* CENTER: INFO */}
       <View style={styles.middle}>
-        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.name}>
+          {item.farmerName || "Unknown"}
+        </Text>
 
-        {/* NEW PHONE TEXT */}
         <Text style={styles.phone}>
           {t("phone")}: {item.phone || t("no_phone")}
         </Text>
       </View>
 
-      {/* RIGHT: BUTTONS */}
+      {/* RIGHT: ACTION */}
       <View style={styles.actions}>
-
-        {/* CALL BUTTON */}
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={() => handleCall(item.phone)}
@@ -100,10 +85,8 @@ export default function ProviderMyContact({ navigation }) {
           <Ionicons name="call" size={18} color="#fff" />
           <Text style={styles.iconText}>{t("call")}</Text>
         </TouchableOpacity>
-
-      
-
       </View>
+
     </View>
   );
 
@@ -119,7 +102,7 @@ export default function ProviderMyContact({ navigation }) {
   );
 }
 
-/* ================= STYLES ================= */
+// ================= STYLES =================
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
@@ -148,7 +131,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  // NEW STYLE
   phone: {
     fontSize: 12,
     color: "#666",
@@ -157,7 +139,6 @@ const styles = StyleSheet.create({
 
   actions: {
     flexDirection: "column",
-    gap: 8,
   },
 
   iconBtn: {
