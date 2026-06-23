@@ -33,6 +33,7 @@ import BookedMachine from "../screens/farmer/BookedMachine";
 import FarmerMyContact from "../screens/farmer/FarmerMyContact"
 import FarmerBottomTabNavigator from "./FarmerBottomTabNavigator";
 import ProviderMessages from "../screens/provider/ProviderMessages"
+import MyBookingCalendar from "../screens/farmer/MyBookingCalendar";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -65,6 +66,7 @@ export default function AppNavigator() {
      
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Booking" component={MyBookingScreen} />
+       <Stack.Screen name="MyBookingCalendar" component={MyBookingCalendar} />
 
       {/* Provider */}
       <Stack.Screen
