@@ -7,7 +7,11 @@ import {
   ActivityIndicator,
   Image,
   TouchableOpacity,
+  Platform,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useTranslation } from "react-i18next";
 import {
@@ -220,65 +224,126 @@ export default function SearchResult({ route }) {
       : `${amount} Taka`;
   };
 
+  // Small pill-shaped divider used to separate blocks of info inside the glass card
+  const ShapeDivider = () => (
+    <View style={styles.dividerRow}>
+      <View style={styles.dividerShape} />
+    </View>
+  );
+
+  // Thin vertical divider used between the price chips
+  const VerticalDivider = () => <View style={styles.verticalDivider} />;
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={() =>
         navigation.navigate("BookingDetails", {
           machine: item,
         })
       }
     >
+      {/* ---- Image on top ---- */}
       <Image
         source={getMachineImage(item)}
         style={styles.image}
         resizeMode="cover"
       />
 
-      <View style={styles.info}>
-        <Text style={styles.title}>
-          {t(item.machineType)}
-        </Text>
+      {/* ---- Liquid glass info panel, floating over the image ---- */}
+      <View style={styles.glassWrapper}>
+        <BlurView
+          intensity={55}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={styles.glassPanel}
+        >
+          {/* subtle glossy highlight across the top of the glass */}
+          <LinearGradient
+            colors={[
+              "rgba(255,255,255,0.55)",
+              "rgba(255,255,255,0.12)",
+              "rgba(255,255,255,0)",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
 
-        <Text style={styles.text}>
-          {t("provider")}: {item.providerName || "Unknown"}
-        </Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {t(item.machineType)}
+          </Text>
 
-        <Text style={styles.text}>
-          {t("phone")}: {item.phone || "N/A"}
-        </Text>
+          <ShapeDivider />
 
-        <Text style={styles.text}>
-          {t("district")}: {getDistrictLabel(item.district)}
-        </Text>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={14} color="#3a2a5d" />
+              <Text style={styles.text} numberOfLines={1}>
+                <Text style={styles.label}>{t("provider")}: </Text>
+                {item.providerName || "Unknown"}
+              </Text>
+            </View>
 
-        <Text style={styles.text}>
-          {t("upazilla")}:{" "}
-          {getUpazillaLabel(
-            item.district,
-            item.upazila
-          )}
-        </Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="construct-outline" size={14} color="#3a2a5d" />
+              <Text style={styles.text} numberOfLines={1}>
+                <Text style={styles.label}>{t("machine_model")}: </Text>
+                {item.machineModel || "N/A"}
+              </Text>
+            </View>
 
-        <Text style={styles.text}>
-          {t("village")}: {item.village || ""}
-        </Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="call-outline" size={14} color="#3a2a5d" />
+              <Text style={styles.text} numberOfLines={1}>
+                <Text style={styles.label}>{t("phone")}: </Text>
+                {item.phone || "N/A"}
+              </Text>
+            </View>
 
-        <Text style={styles.text}>
-          {t("charge_per_decimal")}:{" "}
-          {formatTaka(item.chargePerDecimal)}
-        </Text>
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={14} color="#3a2a5d" />
+              <Text style={styles.text} numberOfLines={1}>
+                <Text style={styles.label}>{t("district")}: </Text>
+                {getDistrictLabel(item.district)}
+                {getUpazillaLabel(item.district, item.upazila)
+                  ? `, ${getUpazillaLabel(item.district, item.upazila)}`
+                  : ""}
+                {item.village ? `, ${item.village}` : ""}
+              </Text>
+            </View>
+          </View>
 
-        <Text style={styles.text}>
-          {t("charge_per_bigha")}:{" "}
-          {formatTaka(item.chargePerBigha)}
-        </Text>
+          <ShapeDivider />
 
-        <Text style={styles.text}>
-          {t("charge_per_hour")}:{" "}
-          {formatTaka(item.chargePerHour)}
-        </Text>
+          <View style={styles.priceRow}>
+            <View style={styles.priceChip}>
+              <Text style={styles.priceLabel}>{t("charge_per_decimal")}</Text>
+              <Text style={styles.priceValue}>
+                {formatTaka(item.chargePerDecimal)}
+              </Text>
+            </View>
+
+            <VerticalDivider />
+
+            <View style={styles.priceChip}>
+              <Text style={styles.priceLabel}>{t("charge_per_bigha")}</Text>
+              <Text style={styles.priceValue}>
+                {formatTaka(item.chargePerBigha)}
+              </Text>
+            </View>
+
+            <VerticalDivider />
+
+            <View style={styles.priceChip}>
+              <Text style={styles.priceLabel}>{t("charge_per_hour")}</Text>
+              <Text style={styles.priceValue}>
+                {formatTaka(item.chargePerHour)}
+              </Text>
+            </View>
+          </View>
+        </BlurView>
       </View>
     </TouchableOpacity>
   );
@@ -384,34 +449,110 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    flexDirection: "row",
-    backgroundColor: "#e6f2ff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 3,
+    borderRadius: 24,
+    marginBottom: 26,
+    backgroundColor: "transparent",
+    shadowColor: "#3a2a5d",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 6,
   },
 
   image: {
-    width: 90,
-    height: 90,
-    borderRadius: 10,
-    marginRight: 12,
+    width: "100%",
+    height: 170,
+    borderRadius: 24,
   },
 
-  info: {
-    flex: 1,
+  // Wrapper pulls the glass panel up so it overlaps the bottom of the image
+  glassWrapper: {
+    marginTop: -34,
+    paddingHorizontal: 10,
+  },
+
+  glassPanel: {
+    borderRadius: 20,
+    padding: 14,
+    overflow: "hidden",
+    backgroundColor:
+      Platform.OS === "android" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.6)",
   },
 
   title: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 4,
+    color: "#2b1b47",
+  },
+
+  // Small shape divider between info blocks
+  dividerRow: {
+    alignItems: "flex-start",
+    marginVertical: 8,
+  },
+
+  dividerShape: {
+    width: 34,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#542e88",
+    opacity: 0.5,
+  },
+
+  infoGrid: {
+    gap: 4,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
   },
 
   text: {
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: 13,
+    marginLeft: 6,
+    color: "#3a2a5d",
+    flexShrink: 1,
+  },
+
+  label: {
+    fontWeight: "700",
+    color: "#2b1b47",
+  },
+
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  priceChip: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  priceLabel: {
+    fontSize: 10,
+    color: "#5b4b7a",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+
+  priceValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2b1b47",
+    marginTop: 2,
+  },
+
+  verticalDivider: {
+    width: 1,
+    height: 26,
+    backgroundColor: "rgba(84,46,136,0.25)",
+    marginHorizontal: 6,
   },
 
   center: {
