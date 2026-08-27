@@ -28,8 +28,12 @@ export default function SearchResult({ route }) {
   const { machineType } = route.params || {};
   const navigation = useNavigation();
 
-  const [machines, setMachines] = useState([]);
+  const [nearbyMachines, setNearbyMachines] = useState([]);
+  const [districtMachines, setDistrictMachines] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [userDistrict, setUserDistrict] = useState("");
+  const [userUpazila, setUserUpazila] = useState("");
 
   const isBn = i18n.language === "bn";
 
@@ -55,7 +59,14 @@ export default function SearchResult({ route }) {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
-        fetchMachines(data.district, data.upazila);
+
+        setUserDistrict(data.district || "");
+        setUserUpazila(data.upazila || "");
+
+        await fetchMachines(
+          data.district,
+          data.upazila
+        );
       }
     } catch (err) {
       console.log("LOAD ERROR:", err);
@@ -65,55 +76,66 @@ export default function SearchResult({ route }) {
 
   const fetchMachines = async (district, upazila) => {
     try {
-      let data = [];
+      /*
+       * ----------------------------------------------------
+       * 1. MACHINES IN USER'S UPAZILA
+       * ----------------------------------------------------
+       */
 
-      let q1 = query(
+      const qUpazila = query(
         collection(db, "machines"),
         where("machineType", "==", machineType),
         where("district", "==", district),
         where("upazila", "==", upazila)
       );
 
-      let snap = await getDocs(q1);
+      const upazilaSnap = await getDocs(qUpazila);
 
-      data = snap.docs.map((doc) => ({
+      const upazilaData = upazilaSnap.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
 
-      if (data.length === 0) {
-        let q2 = query(
-          collection(db, "machines"),
-          where("machineType", "==", machineType),
-          where("district", "==", district)
-        );
+      /*
+       * ----------------------------------------------------
+       * 2. ALL MACHINES IN USER'S DISTRICT
+       * ----------------------------------------------------
+       */
 
-        snap = await getDocs(q2);
+      const qDistrict = query(
+        collection(db, "machines"),
+        where("machineType", "==", machineType),
+        where("district", "==", district)
+      );
 
-        data = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-      }
+      const districtSnap = await getDocs(qDistrict);
 
-      if (data.length === 0) {
-        let q3 = query(
-          collection(db, "machines"),
-          where("machineType", "==", machineType)
-        );
+      const districtData = districtSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-        snap = await getDocs(q3);
+      /*
+       * ----------------------------------------------------
+       * 3. REMOVE MACHINES FROM USER'S UPAZILA
+       *
+       * Only machines from OTHER upazilas remain here.
+       * ----------------------------------------------------
+       */
 
-        data = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-      }
+      const outsideUpazilaData = districtData.filter(
+        (machine) =>
+          normalize(machine.upazila) !== normalize(upazila)
+      );
 
-      setMachines(data);
+      setNearbyMachines(upazilaData);
+      setDistrictMachines(outsideUpazilaData);
+
     } catch (error) {
       console.log("ERROR FETCHING MACHINES:", error);
-      setMachines([]);
+
+      setNearbyMachines([]);
+      setDistrictMachines([]);
     } finally {
       setLoading(false);
     }
@@ -232,8 +254,7 @@ export default function SearchResult({ route }) {
         </Text>
 
         <Text style={styles.text}>
-          {t("upazilla")}:
-          {" "}
+          {t("upazilla")}:{" "}
           {getUpazillaLabel(
             item.district,
             item.upazila
@@ -245,25 +266,65 @@ export default function SearchResult({ route }) {
         </Text>
 
         <Text style={styles.text}>
-          {t("charge_per_decimal")}:
-          {" "}
+          {t("charge_per_decimal")}:{" "}
           {formatTaka(item.chargePerDecimal)}
         </Text>
 
         <Text style={styles.text}>
-          {t("charge_per_bigha")}:
-          {" "}
+          {t("charge_per_bigha")}:{" "}
           {formatTaka(item.chargePerBigha)}
         </Text>
 
         <Text style={styles.text}>
-          {t("charge_per_hour")}:
-          {" "}
+          {t("charge_per_hour")}:{" "}
           {formatTaka(item.chargePerHour)}
         </Text>
       </View>
     </TouchableOpacity>
   );
+
+  const renderSectionHeader = (title) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>
+        {title}
+      </Text>
+    </View>
+  );
+
+  /*
+   * Combine both sections into one FlatList.
+   */
+  const listData = [
+    {
+      type: "header",
+      id: "nearby-header",
+      title: isBn
+        ? `${getUpazillaLabel(userDistrict, userUpazila)} এলাকায় মেশিন`
+        : `Machines in your Upazila`,
+    },
+
+    ...nearbyMachines.map((machine) => ({
+      type: "machine",
+      id: machine.id,
+      machine,
+    })),
+
+    {
+      type: "header",
+      id: "district-header",
+      title: isBn
+        ? `${getDistrictLabel(userDistrict)} জেলার অন্যান্য মেশিন`
+        : `Machine Outside your Upazila but in ${getDistrictLabel(
+            userDistrict
+          )}`,
+    },
+
+    ...districtMachines.map((machine) => ({
+      type: "machine",
+      id: machine.id,
+      machine,
+    })),
+  ];
 
   if (loading) {
     return (
@@ -274,20 +335,54 @@ export default function SearchResult({ route }) {
     );
   }
 
+  if (
+    nearbyMachines.length === 0 &&
+    districtMachines.length === 0
+  ) {
+    return (
+      <View style={styles.center}>
+        <Text>{t("no_data")}</Text>
+      </View>
+    );
+  }
+
   return (
     <FlatList
-      data={machines}
+      data={listData}
       keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={{ padding: 15 }}
-      ListEmptyComponent={
-        <Text>{t("no_data")}</Text>
-      }
+      renderItem={({ item }) => {
+        if (item.type === "header") {
+          return renderSectionHeader(item.title);
+        }
+
+        return renderItem({
+          item: item.machine,
+        });
+      }}
+      contentContainerStyle={{
+        padding: 15,
+        paddingBottom: 200,
+      }}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  sectionHeader: {
+    marginTop: 10,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#542e88",
+    borderRadius: 10,
+  },
+
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+
   card: {
     flexDirection: "row",
     backgroundColor: "#e6f2ff",

@@ -488,5 +488,5 @@ modalBox: {
 
 modalScroll: {
   paddingBottom: 30,
-},
+}, 
 });
